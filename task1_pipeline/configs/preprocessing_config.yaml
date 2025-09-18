@@ -1,0 +1,52 @@
+# Preprocessing configuration for Madrid Housing Market dataset
+
+target_column: "buy_price"
+
+# Columns to drop from the dataset
+columns_to_drop:
+  - "title"
+  - "has_public_parking"
+  - "portal"
+  - "are_pets_allowed"
+  - "is_furnished"
+  - "is_kitchen_equipped"
+  - "rent_price_by_area"
+  - "latitude"
+  - "longitude"
+  - "has_private_parking"
+  - "door"
+  - "street_number"
+  - "street_name"
+  - "raw_address"
+  - "is_exact_address_hidden"
+  - "rent_price"
+  - "is_rent_price_known"
+  - "is_buy_price_known"
+
+# Boolean columns that should be filled with False for missing values
+boolean_columns:
+  - "has_ac"
+  - "has_fitted_wardrobes"
+  - "has_pool"
+  - "has_terrace"
+  - "has_balcony"
+  - "has_storage_room"
+  - "is_accessible"
+  - "has_green_zones"
+
+# Categorical columns for one-hot encoding
+categorical_columns:
+  - "house_type_id"
+  - "neighborhood_id"
+
+# Critical columns - rows with missing values in these columns will be dropped
+critical_columns:
+  - "sq_mt_built"
+  - "n_bathrooms"
+
+# Numeric columns for scaling
+numeric_columns:
+  - "sq_mt_built"
+  - "n_rooms"
+  - "n_bathrooms"
+  - "built_year"

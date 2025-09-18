@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  madrid-housing-api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+    environment:
+      - MLFLOW_TRACKING_URI=sqlite:///mlruns.db
+    command: ["python", "src/api.py"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mlflow-ui:
+    image: python:3.9-slim
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    working_dir: /mlruns
+    command: ["sh", "-c", "pip install mlflow && mlflow ui --backend-store-uri sqlite:///mlruns.db --host 0.0.0.0 --port 5000"]
+    depends_on:
+      - madrid-housing-api

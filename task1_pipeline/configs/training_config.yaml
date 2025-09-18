@@ -1,0 +1,83 @@
+# Training configuration for Madrid Housing Market price prediction
+
+# Data configuration
+data:
+  source_path: "houses_Madrid.csv"
+  target_column: "buy_price"
+  test_size: 0.2
+  random_state: 42
+
+# MLflow configuration
+mlflow:
+  experiment_name: "madrid_housing_experiments"
+  tracking_uri: "sqlite:///mlruns.db"
+
+# Multiple experimental runs with different configurations
+experiments:
+  - run_name: "baseline_model"
+    description: "Baseline LightGBM with default parameters"
+    model:
+      objective: "regression"
+      metric: "rmse"
+      boosting_type: "gbdt"
+      num_leaves: 31
+      learning_rate: 0.1
+      feature_fraction: 0.9
+      bagging_fraction: 0.8
+      bagging_freq: 5
+      verbose: -1
+      random_state: 42
+    training:
+      early_stopping_rounds: 10
+      eval_metric: "rmse"
+      verbose_eval: 100
+
+  - run_name: "tuned_model"
+    description: "Tuned LightGBM with optimized hyperparameters"
+    model:
+      objective: "regression"
+      metric: "rmse"
+      boosting_type: "gbdt"
+      num_leaves: 50
+      learning_rate: 0.05
+      feature_fraction: 0.8
+      bagging_fraction: 0.7
+      bagging_freq: 10
+      min_data_in_leaf: 20
+      min_sum_hessian_in_leaf: 1e-3
+      lambda_l1: 0.1
+      lambda_l2: 0.1
+      verbose: -1
+      random_state: 42
+    training:
+      early_stopping_rounds: 20
+      eval_metric: "rmse"
+      verbose_eval: 100
+
+  - run_name: "high_performance_model"
+    description: "High performance LightGBM with aggressive tuning"
+    model:
+      objective: "regression"
+      metric: "rmse"
+      boosting_type: "gbdt"
+      num_leaves: 100
+      learning_rate: 0.03
+      feature_fraction: 0.7
+      bagging_fraction: 0.6
+      bagging_freq: 15
+      min_data_in_leaf: 10
+      min_sum_hessian_in_leaf: 1e-4
+      lambda_l1: 0.2
+      lambda_l2: 0.2
+      max_depth: 8
+      verbose: -1
+      random_state: 42
+    training:
+      early_stopping_rounds: 30
+      eval_metric: "rmse"
+      verbose_eval: 50
+
+# Model saving
+model_saving:
+  model_path: "models/madrid_housing_model.pkl"
+  preprocessor_path: "models/preprocessor.pkl"
