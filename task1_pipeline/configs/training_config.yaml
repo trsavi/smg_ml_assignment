@@ -5,12 +5,32 @@ data:
   source_path: "houses_Madrid.csv"
   target_column: "buy_price"
   test_size: 0.2
+  val_size: 0.2  # 20% of remaining data for validation
   random_state: 42
 
 # MLflow configuration
 mlflow:
   experiment_name: "madrid_housing_experiments"
   tracking_uri: "sqlite:///mlruns.db"
+
+# Default model configuration (used when running single experiment)
+model:
+  objective: "regression"
+  metric: "rmse"
+  boosting_type: "gbdt"
+  num_leaves: 31
+  learning_rate: 0.1
+  feature_fraction: 0.9
+  bagging_fraction: 0.8
+  bagging_freq: 5
+  verbose: -1
+  random_state: 42
+
+# Default training configuration
+training:
+  early_stopping_rounds: 10
+  eval_metric: "rmse"
+  verbose_eval: 100
 
 # Multiple experimental runs with different configurations
 experiments:

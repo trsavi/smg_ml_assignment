@@ -2,26 +2,47 @@
 
 target_column: "buy_price"
 
-# Columns to drop from the dataset
+# Columns to drop from the dataset (following exact instructions)
 columns_to_drop:
+  - "Unnamed: 0"
+  - "id"
   - "title"
-  - "has_public_parking"
+  - "subtitle"
+  - "sq_mt_useful"
+  - "n_floors"
+  - "sq_mt_allotment"
+  - "latitude"
+  - "longitude"
+  - "raw_address"
+  - "is_exact_address_hidden"
+  - "street_name"
+  - "street_number"
   - "portal"
+  - "floor"
+  - "is_floor_under"
+  - "door"
+  - "operation"
+  - "rent_price"
+  - "rent_price_by_area"
+  - "is_rent_price_known"
+  - "buy_price_by_area"
+  - "is_buy_price_known"
+  - "has_central_heating"
+  - "has_individual_heating"
   - "are_pets_allowed"
   - "is_furnished"
   - "is_kitchen_equipped"
-  - "rent_price_by_area"
-  - "latitude"
-  - "longitude"
+  - "has_garden"
+  - "is_renewal_needed"
+  - "energy_certificate"
   - "has_private_parking"
-  - "door"
-  - "street_number"
-  - "street_name"
-  - "raw_address"
-  - "is_exact_address_hidden"
-  - "rent_price"
-  - "is_rent_price_known"
-  - "is_buy_price_known"
+  - "has_public_parking"
+  - "is_parking_included_in_price"
+  - "parking_price"
+  - "is_orientation_north"
+  - "is_orientation_west"
+  - "is_orientation_south"
+  - "is_orientation_east"
 
 # Boolean columns that should be filled with False for missing values
 boolean_columns:
@@ -34,19 +55,7 @@ boolean_columns:
   - "is_accessible"
   - "has_green_zones"
 
-# Categorical columns for one-hot encoding
-categorical_columns:
-  - "house_type_id"
-  - "neighborhood_id"
-
 # Critical columns - rows with missing values in these columns will be dropped
 critical_columns:
   - "sq_mt_built"
   - "n_bathrooms"
-
-# Numeric columns for scaling
-numeric_columns:
-  - "sq_mt_built"
-  - "n_rooms"
-  - "n_bathrooms"
-  - "built_year"

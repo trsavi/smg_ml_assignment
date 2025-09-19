@@ -17,7 +17,7 @@ install: ## Install required packages
 # Data preparation
 prepare-data: ## Prepare and preprocess the dataset
 	@echo "Preparing data..."
-	python -c "from src.preprocessing import MadridHousingPreprocessor; from src.data_loader import load_data; df = load_data('src/houses_Madrid.csv'); preprocessor = MadridHousingPreprocessor(); X, y = preprocessor.fit_transform(df.drop(columns=['buy_price']), df['buy_price']); print(f'Data prepared: {X.shape}')"
+	python scripts/prepare_data.py
 
 # Training
 train: ## Train the model with MLflow tracking
@@ -27,7 +27,7 @@ train: ## Train the model with MLflow tracking
 # Evaluation
 evaluate: ## Evaluate the trained model
 	@echo "Evaluating model..."
-	cd src && python -c "from train import MadridHousingTrainer; trainer = MadridHousingTrainer(); results = trainer.run_training_pipeline(); print(f'Evaluation completed. RMSE: {results[\"metrics\"][\"rmse\"]:.2f}')"
+	python scripts/evaluate_model.py
 
 # Model serving
 serve: ## Start the FastAPI server
@@ -81,16 +81,7 @@ docker-compose-logs: ## View docker-compose logs
 # API testing
 test-api: ## Test API endpoints
 	@echo "Testing API endpoints..."
-	@echo "Health check:"
-	curl -X GET "http://localhost:8000/health"
-	@echo ""
-	@echo "Model info:"
-	curl -X GET "http://localhost:8000/model/info"
-	@echo ""
-	@echo "Single prediction:"
-	curl -X POST "http://localhost:8000/predict" \
-		-H "Content-Type: application/json" \
-		-d '{"sq_mt_built": 100, "n_rooms": 3, "n_bathrooms": 2, "house_type_id": "HouseType 1: Piso", "neighborhood_id": "Neighborhood 1"}'
+	python scripts/test_api.py
 
 # Documentation
 docs: ## Generate documentation

@@ -15,10 +15,12 @@ import mlflow
 import mlflow.lightgbm
 import lightgbm as lgb
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, train_test_split
 import joblib
 from datetime import datetime
 import warnings
+import subprocess
+import sys
 
 from data_loader import load_data, split_data
 from preprocessing import MadridHousingPreprocessor
@@ -86,44 +88,95 @@ class MadridHousingTrainer:
             }
         }
     
-    def prepare_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Load and prepare data for training."""
+    def _check_preprocessed_data(self) -> bool:
+        """Check if preprocessed data file exists."""
+        preprocessed_path = Path("data/preprocessed_houses_Madrid.csv")
+        return preprocessed_path.exists()
+    
+    def _prepare_data_if_needed(self) -> None:
+        """Call prepare_data script if preprocessed data doesn't exist."""
+        if not self._check_preprocessed_data():
+            logger.info("Preprocessed data not found. Running data preparation...")
+            try:
+                # Call prepare_data script with --store flag
+                result = subprocess.run(
+                    [sys.executable, "scripts/prepare_data.py", "--store"],
+                    cwd=Path.cwd(),
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                logger.info("Data preparation completed successfully")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Error running data preparation: {e}")
+                logger.error(f"stdout: {e.stdout}")
+                logger.error(f"stderr: {e.stderr}")
+                raise RuntimeError("Failed to prepare data")
+        else:
+            logger.info("Using existing preprocessed data")
+    
+    def _load_preprocessed_data(self) -> pd.DataFrame:
+        """Load preprocessed data from file."""
+        preprocessed_path = Path("data/preprocessed_houses_Madrid.csv")
+        if not preprocessed_path.exists():
+            raise FileNotFoundError(f"Preprocessed data not found at {preprocessed_path}")
+        
+        df = pd.read_csv(preprocessed_path)
+        logger.info(f"Loaded preprocessed data: {df.shape}")
+        return df
+    
+    def prepare_data(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]:
+        """Load and prepare data for training with train/validation/test splits."""
         logger.info("=" * 60)
         logger.info("PREPARING DATA")
         logger.info("=" * 60)
         
-        # Load data
-        data_config = self.config['data']
-        df = load_data(data_config['source_path'])
+        # Check and prepare data if needed
+        self._prepare_data_if_needed()
         
-        # Split data
-        X_train, X_test, y_train, y_test = split_data(
-            df, 
-            data_config['target_column'], 
+        # Load preprocessed data
+        df_processed = self._load_preprocessed_data()
+        
+        # Get target column from config
+        data_config = self.config['data']
+        target_column = data_config['target_column']
+        
+        # Split into features and target
+        if target_column not in df_processed.columns:
+            raise ValueError(f"Target column '{target_column}' not found in preprocessed data")
+        
+        X = df_processed.drop(columns=[target_column])
+        y = df_processed[target_column]
+        
+        # First split: separate test set
+        X_temp, X_test, y_temp, y_test = train_test_split(
+            X, y,
             test_size=data_config['test_size'],
             random_state=data_config['random_state']
         )
         
-        # Initialize preprocessor
-        self.preprocessor = MadridHousingPreprocessor()
+        # Second split: separate train and validation from remaining data
+        val_size = data_config.get('val_size', 0.2)  # 20% of remaining data for validation
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_temp, y_temp, 
+            test_size=val_size, 
+            random_state=data_config['random_state']
+        )
         
-        # Fit and transform training data
-        X_train_transformed, y_train_transformed = self.preprocessor.fit_transform(X_train, y_train)
+        # Feature names are now cleaned during preprocessing
         
-        # Transform test data
-        X_test_transformed = self.preprocessor.transform(X_test)
+        # Store feature names for later use
+        self.feature_names = X_train.columns.tolist()
         
-        # Store feature names
-        self.feature_names = self.preprocessor.get_feature_names()
+        logger.info(f"Training data shape: {X_train.shape}")
+        logger.info(f"Validation data shape: {X_val.shape}")
+        logger.info(f"Test data shape: {X_test.shape}")
+        logger.info(f"Number of features: {X_train.shape[1]}")
         
-        logger.info(f"Training data shape: {X_train_transformed.shape}")
-        logger.info(f"Test data shape: {X_test_transformed.shape}")
-        logger.info(f"Number of features: {len(self.feature_names)}")
-        
-        return X_train_transformed, X_test_transformed, y_train_transformed, y_test_transformed
+        return X_train, X_val, X_test, y_train, y_val, y_test
     
-    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, 
-                   X_val: np.ndarray = None, y_val: np.ndarray = None) -> lgb.LGBMRegressor:
+    def train_model(self, X_train: pd.DataFrame, y_train: pd.Series, 
+                   X_val: pd.DataFrame = None, y_val: pd.Series = None) -> lgb.LGBMRegressor:
         """Train LightGBM model."""
         logger.info("=" * 60)
         logger.info("TRAINING MODEL")
@@ -142,7 +195,7 @@ class MadridHousingTrainer:
             eval_set = [(X_val, y_val)]
         
         # Train model
-        logger.info("Training LightGBM model...")
+        logger.info("Training LightGBM model...")         
         self.model.fit(
             X_train, y_train,
             eval_set=eval_set,
@@ -155,7 +208,7 @@ class MadridHousingTrainer:
         logger.info("Model training completed")
         return self.model
     
-    def evaluate_model(self, X_test: np.ndarray, y_test: np.ndarray) -> Dict[str, float]:
+    def evaluate_model(self, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]:
         """Evaluate model performance."""
         logger.info("=" * 60)
         logger.info("EVALUATING MODEL")
@@ -212,11 +265,12 @@ class MadridHousingTrainer:
             # Log metrics
             mlflow.log_metrics(metrics)
             
-            # Log model
+            # Log model (simplified - no environment files)
             mlflow.lightgbm.log_model(
                 lgb_model=self.model,
                 artifact_path="model",
-                registered_model_name="madrid_housing_model"
+                registered_model_name="madrid_housing_model",
+                conda_env=None  # Don't log conda environment
             )
             
             # Log preprocessing pipeline
@@ -251,12 +305,15 @@ class MadridHousingTrainer:
         # Save model
         joblib.dump(self.model, model_path)
         
-        # Save preprocessor
-        preprocessor_path = str(Path(model_path).parent / "preprocessor.pkl")
-        self.preprocessor.save_pipeline(preprocessor_path)
+        # Save preprocessor (if available)
+        if self.preprocessor is not None:
+            preprocessor_path = str(Path(model_path).parent / "preprocessor.pkl")
+            self.preprocessor.save_pipeline(preprocessor_path)
+            logger.info(f"Preprocessor saved to {preprocessor_path}")
+        else:
+            logger.info("No preprocessor to save (preprocessing was done separately)")
         
         logger.info(f"Model saved to {model_path}")
-        logger.info(f"Preprocessor saved to {preprocessor_path}")
     
     def run_training_pipeline(self, run_name: str = None) -> Dict[str, Any]:
         """Run the complete training pipeline."""
@@ -264,19 +321,13 @@ class MadridHousingTrainer:
         logger.info("=" * 80)
         
         try:
-            # Prepare data
-            X_train, X_test, y_train, y_test = self.prepare_data()
+            # Prepare data (now includes train/val/test splits)
+            X_train, X_val, X_test, y_train, y_val, y_test = self.prepare_data()
             
-            # Split training data for validation
-            from sklearn.model_selection import train_test_split
-            X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
-                X_train, y_train, test_size=0.2, random_state=42
-            )
+            # Train model with validation set
+            self.train_model(X_train, y_train, X_val, y_val)
             
-            # Train model
-            self.train_model(X_train_split, y_train_split, X_val_split, y_val_split)
-            
-            # Evaluate model
+            # Evaluate model on test set
             metrics = self.evaluate_model(X_test, y_test)
             
             # Log to MLflow
@@ -303,14 +354,8 @@ class MadridHousingTrainer:
         logger.info("Starting Multiple Experiments Training Pipeline")
         logger.info("=" * 80)
         
-        # Prepare data once
-        X_train, X_test, y_train, y_test = self.prepare_data()
-        
-        # Split training data for validation
-        from sklearn.model_selection import train_test_split
-        X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
-            X_train, y_train, test_size=0.2, random_state=42
-        )
+        # Prepare data once (now includes train/val/test splits)
+        X_train, X_val, X_test, y_train, y_val, y_test = self.prepare_data()
         
         results = {}
         experiments = self.config.get('experiments', [])
@@ -331,7 +376,7 @@ class MadridHousingTrainer:
             
             try:
                 # Train model with this configuration
-                self.train_model(X_train_split, y_train_split, X_val_split, y_val_split)
+                self.train_model(X_train, y_train, X_val, y_val)
                 
                 # Evaluate model
                 metrics = self.evaluate_model(X_test, y_test)
