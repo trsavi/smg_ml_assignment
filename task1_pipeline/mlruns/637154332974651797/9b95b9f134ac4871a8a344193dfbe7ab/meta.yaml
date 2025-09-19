@@ -1,0 +1,14 @@
+artifact_uri: file:C:/Users/User/Documents/Projects/SMG Assignment/smg_ml_assignment/task1_pipeline/mlruns/637154332974651797/9b95b9f134ac4871a8a344193dfbe7ab/artifacts
+end_time: 1758284606488
+entry_point_name: ''
+experiment_id: '637154332974651797'
+lifecycle_stage: active
+run_id: 9b95b9f134ac4871a8a344193dfbe7ab
+run_name: mlflow_test
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1758284590250
+status: 3
+tags: []
+user_id: User

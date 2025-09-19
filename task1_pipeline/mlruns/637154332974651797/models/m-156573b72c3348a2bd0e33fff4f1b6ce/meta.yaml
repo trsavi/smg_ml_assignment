@@ -1,0 +1,10 @@
+artifact_location: file:C:/Users/User/Documents/Projects/SMG Assignment/smg_ml_assignment/task1_pipeline/mlruns/637154332974651797/models/m-156573b72c3348a2bd0e33fff4f1b6ce/artifacts
+creation_timestamp: 1758284723597
+experiment_id: '637154332974651797'
+last_updated_timestamp: 1758284729127
+model_id: m-156573b72c3348a2bd0e33fff4f1b6ce
+model_type: null
+name: model
+source_run_id: 2893ce20bb0847bca4c931204aece956
+status: 2
+status_message: null

@@ -10,15 +10,18 @@ data:
 
 # MLflow configuration
 mlflow:
-  experiment_name: "madrid_housing_experiments"
-  tracking_uri: "sqlite:///mlruns.db"
+  experiment_name: "housing_price_experiments"
+  tracking_uri: "./mlruns"
 
 # Default model configuration (used when running single experiment)
 model:
   objective: "regression"
   metric: "rmse"
   boosting_type: "gbdt"
-  num_leaves: 31
+  n_estimators: 300
+  min_child_samples: 4
+  max_depth: 8
+  num_leaves: 20
   learning_rate: 0.1
   feature_fraction: 0.9
   bagging_fraction: 0.8
@@ -58,7 +61,7 @@ experiments:
       objective: "regression"
       metric: "rmse"
       boosting_type: "gbdt"
-      num_leaves: 50
+      num_leaves: 21
       learning_rate: 0.05
       feature_fraction: 0.8
       bagging_fraction: 0.7

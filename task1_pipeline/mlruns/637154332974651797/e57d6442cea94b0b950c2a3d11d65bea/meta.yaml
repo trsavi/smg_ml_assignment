@@ -1,0 +1,14 @@
+artifact_uri: file:C:/Users/User/Documents/Projects/SMG Assignment/smg_ml_assignment/task1_pipeline/mlruns/637154332974651797/e57d6442cea94b0b950c2a3d11d65bea/artifacts
+end_time: 1758284723232
+entry_point_name: ''
+experiment_id: '637154332974651797'
+lifecycle_stage: active
+run_id: e57d6442cea94b0b950c2a3d11d65bea
+run_name: baseline_model
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1758284715944
+status: 3
+tags: []
+user_id: User

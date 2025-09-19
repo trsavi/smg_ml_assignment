@@ -20,7 +20,7 @@ prepare-data: ## Prepare and preprocess the dataset
 	python scripts/prepare_data.py
 
 # Training
-train: ## Train the model with MLflow tracking
+train: ## Train the model
 	@echo "Training model..."
 	cd src && python train.py
 
@@ -42,7 +42,7 @@ serve-dev: ## Start the FastAPI server in development mode
 # MLflow UI
 mlflow-ui: ## Start MLflow UI to view experiments
 	@echo "Starting MLflow UI..."
-	mlflow ui --backend-store-uri sqlite:///mlruns.db --host 0.0.0.0 --port 5000
+	mlflow ui --backend-store-uri ./mlruns --port 5000
 
 # Testing
 test: ## Run tests
@@ -87,4 +87,3 @@ test-api: ## Test API endpoints
 docs: ## Generate documentation
 	@echo "Generating documentation..."
 	@echo "API documentation available at: http://localhost:8000/docs"
-	@echo "MLflow UI available at: http://localhost:5000"

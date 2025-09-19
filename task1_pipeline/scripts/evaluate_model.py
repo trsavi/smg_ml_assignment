@@ -41,11 +41,12 @@ def main():
             # Run single training pipeline (which includes evaluation)
             results = trainer.run_training_pipeline(run_name=args.run_name)
             
-            print(f"Single evaluation completed!")
+            print(f"Single evaluation completed! Run ID: {results['run_id']}")
             print(f"Test RMSE: {results['metrics']['rmse']:.2f}")
             print(f"Test MAE: {results['metrics']['mae']:.2f}")
             print(f"Test R²: {results['metrics']['r2']:.3f}")
             print(f"Test MAPE: {results['metrics']['mape']:.2f}%")
+            print("To view MLflow UI: mlflow ui --backend-store-uri ./mlruns --port 5000")
             
         elif args.mode == 'experiments':
             # Run multiple experiments
@@ -59,17 +60,19 @@ def main():
             for exp_name, result in results.items():
                 if 'error' not in result:
                     print(f"  {exp_name}:")
+                    print(f"    Run ID: {result['run_id']}")
                     print(f"    RMSE: {result['metrics']['rmse']:.2f}")
                     print(f"    MAE: {result['metrics']['mae']:.2f}")
                     print(f"    R²: {result['metrics']['r2']:.3f}")
                     print(f"    MAPE: {result['metrics']['mape']:.2f}%")
-                    print(f"    Run ID: {result['run_id']}")
                     if result.get('description'):
                         print(f"    Description: {result['description']}")
                     print()
                 else:
                     print(f"  {exp_name}: FAILED - {result['error']}")
                     print()
+            
+            print("To view MLflow UI: mlflow ui --backend-store-uri ./mlruns --port 5000")
         
     except Exception as e:
         print(f"Error evaluating model: {e}")

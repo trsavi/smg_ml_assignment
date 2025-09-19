@@ -1,6 +1,6 @@
 # Madrid Housing Market Price Prediction Pipeline
 
-A production-ready machine learning pipeline for predicting housing prices in Madrid using LightGBM regression with MLflow experiment tracking and FastAPI model serving.
+A production-ready machine learning pipeline for predicting housing prices in Madrid using LightGBM regression and FastAPI model serving.
 
 ## 🏗️ Architecture
 
@@ -9,8 +9,8 @@ A production-ready machine learning pipeline for predicting housing prices in Ma
 │   Data Layer    │    │  Preprocessing   │    │   Training      │
 │                 │    │                  │    │                 │
 │ • data_loader   │───▶│ • preprocessing  │───▶│ • train.py      │
-│ • CSV loading   │    │ • Pipeline       │    │ • MLflow        │
-│ • Validation    │    │ • Scaling        │    │ • Hyperparams   │
+│ • CSV loading   │    │ • Pipeline       │    │ • Hyperparams   │
+│ • Validation    │    │ • Scaling        │    │ • Model training│
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                                                          │
                                                          ▼
@@ -18,7 +18,7 @@ A production-ready machine learning pipeline for predicting housing prices in Ma
 │   Model API     │    │   Evaluation     │    │   Model Store   │
 │                 │    │                  │    │                 │
 │ • FastAPI       │◀───│ • Metrics        │◀───│ • joblib        │
-│ • REST endpoints│    │ • Validation     │    │ • MLflow        │
+│ • REST endpoints│    │ • Validation     │    │ • Model saving  │
 │ • Pydantic      │    │ • Cross-val      │    │ • Artifacts     │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
@@ -48,7 +48,7 @@ make prepare-data
 ### 3. Training
 
 ```bash
-# Train the model with MLflow tracking
+# Train the model
 make train
 ```
 
@@ -62,7 +62,6 @@ make serve
 ### 5. View Results
 
 - **API Documentation**: http://localhost:8000/docs
-- **MLflow UI**: http://localhost:5000
 
 ## 📁 Project Structure
 
@@ -71,13 +70,12 @@ task1_pipeline/
 ├── src/
 │   ├── data_loader.py      # Data loading and validation
 │   ├── preprocessing.py    # Preprocessing pipeline
-│   ├── train.py           # Model training with MLflow
+│   ├── train.py           # Model training
 │   └── api.py             # FastAPI model serving
 ├── configs/
 │   ├── preprocessing_config.yaml
 │   └── training_config.yaml
 ├── models/                # Saved models (created after training)
-├── mlruns/               # MLflow experiments (created after training)
 ├── Makefile              # Automation commands
 ├── requirements.txt      # Python dependencies
 └── README.md            # This file
@@ -89,11 +87,10 @@ task1_pipeline/
 |---------|-------------|
 | `make install` | Install required packages |
 | `make prepare-data` | Prepare and preprocess dataset |
-| `make train` | Train model with MLflow tracking |
+| `make train` | Train model |
 | `make evaluate` | Evaluate trained model |
 | `make serve` | Start FastAPI server |
 | `make serve-dev` | Start development server with auto-reload |
-| `make mlflow-ui` | Start MLflow UI |
 | `make test` | Run tests |
 | `make clean` | Clean up generated files |
 | `make pipeline` | Run complete pipeline (prepare → train → evaluate) |
@@ -115,7 +112,6 @@ task1_pipeline/
 
 ### Training (`train.py`)
 - **LightGBM regression** with hyperparameter tuning
-- **MLflow integration** for experiment tracking
 - **Cross-validation** for robust evaluation
 - **Model persistence** with joblib
 
@@ -170,23 +166,6 @@ curl -X POST "http://localhost:8000/batch_predict" \
   }'
 ```
 
-## 📈 MLflow Integration
-
-The pipeline includes comprehensive MLflow integration:
-
-- **Experiment Tracking**: All runs are logged with hyperparameters and metrics
-- **Model Registry**: Trained models are automatically registered
-- **Artifact Storage**: Preprocessing pipelines and feature importance are stored
-- **Metric Logging**: RMSE, MAE, R², and MAPE are tracked
-
-### Viewing Experiments
-
-```bash
-# Start MLflow UI
-make mlflow-ui
-
-# Open browser to http://localhost:5000
-```
 
 ## ⚙️ Configuration
 
@@ -198,7 +177,6 @@ make mlflow-ui
 
 ### Training Configuration (`configs/training_config.yaml`)
 - Data paths and parameters
-- MLflow settings
 - Model hyperparameters
 - Training parameters
 
@@ -266,7 +244,6 @@ This project is licensed under the MIT License.
 1. **Model not loaded**: Ensure you've run `make train` first
 2. **Port conflicts**: Change ports in the Makefile or use different ports
 3. **Memory issues**: Reduce batch size or use smaller datasets
-4. **MLflow UI not accessible**: Check if port 5000 is available
 
 ### Logs
 

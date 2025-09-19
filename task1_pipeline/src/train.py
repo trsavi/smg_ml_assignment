@@ -1,8 +1,8 @@
 """
 Training module for Madrid Housing Market price prediction.
 
-This module provides training functionality with MLflow experiment tracking,
-hyperparameter management, and model evaluation.
+This module provides training functionality with hyperparameter management
+and model evaluation.
 """
 
 import pandas as pd
@@ -66,8 +66,8 @@ class MadridHousingTrainer:
                 'random_state': 42
             },
             'mlflow': {
-                'experiment_name': 'madrid_housing_experiments',
-                'tracking_uri': 'sqlite:///mlruns.db'
+                'experiment_name': 'housing_price_experiments',
+                'tracking_uri': './mlruns'
             },
             'model': {
                 'objective': 'regression',
@@ -242,56 +242,96 @@ class MadridHousingTrainer:
         
         return metrics
     
+    def _calculate_data_version(self) -> Dict[str, str]:
+        """Calculate data versioning information."""
+        import hashlib
+        
+        data_info = {}
+        
+        # Calculate hash of preprocessed data
+        preprocessed_path = Path("data/preprocessed_houses_Madrid.csv")
+        if preprocessed_path.exists():
+            hash_md5 = hashlib.md5()
+            with open(preprocessed_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            data_info['preprocessed_data_hash'] = hash_md5.hexdigest()
+            data_info['preprocessed_data_size'] = str(preprocessed_path.stat().st_size)
+            data_info['preprocessed_data_rows'] = str(len(pd.read_csv(preprocessed_path)))
+        else:
+            data_info['preprocessed_data_hash'] = 'unknown'
+            data_info['preprocessed_data_size'] = 'unknown'
+            data_info['preprocessed_data_rows'] = 'unknown'
+        
+        # Calculate hash of original data
+        original_path = Path(self.config['data']['source_path'])
+        if original_path.exists():
+            hash_md5 = hashlib.md5()
+            with open(original_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            data_info['original_data_hash'] = hash_md5.hexdigest()
+            data_info['original_data_size'] = str(original_path.stat().st_size)
+            data_info['original_data_rows'] = str(len(pd.read_csv(original_path)))
+        else:
+            data_info['original_data_hash'] = 'unknown'
+            data_info['original_data_size'] = 'unknown'
+            data_info['original_data_rows'] = 'unknown'
+        
+        return data_info
+
     def log_to_mlflow(self, metrics: Dict[str, float], run_name: str = None) -> str:
-        """Log experiment to MLflow."""
+        """Log experiment to MLflow with hyperparameters, metrics, and artifacts."""
         logger.info("=" * 60)
         logger.info("LOGGING TO MLFLOW")
         logger.info("=" * 60)
         
-        # Set MLflow tracking URI
+        # Set MLflow tracking URI (local file backend)
         mlflow_config = self.config['mlflow']
         mlflow.set_tracking_uri(mlflow_config['tracking_uri'])
         
-        # Set experiment
+        # Set experiment (creates mlruns/ directory automatically)
         mlflow.set_experiment(mlflow_config['experiment_name'])
         
         # Start run
         with mlflow.start_run(run_name=run_name) as run:
-            # Log parameters
+            # Log hyperparameters
             mlflow.log_params(self.config['model'])
             mlflow.log_params(self.config['training'])
             mlflow.log_params(self.config['data'])
             
+            # Log data versioning information
+            data_version_info = self._calculate_data_version()
+            mlflow.log_params(data_version_info)
+            
             # Log metrics
             mlflow.log_metrics(metrics)
             
-            # Log model (simplified - no environment files)
+            # Log the trained model artifact
             mlflow.lightgbm.log_model(
                 lgb_model=self.model,
                 artifact_path="model",
-                registered_model_name="madrid_housing_model",
-                conda_env=None  # Don't log conda environment
+                registered_model_name="madrid_housing_model"
             )
             
-            # Log preprocessing pipeline
-            if self.preprocessor is not None:
-                preprocessor_path = "preprocessor.pkl"
-                self.preprocessor.save_pipeline(preprocessor_path)
-                mlflow.log_artifact(preprocessor_path)
-                Path(preprocessor_path).unlink()  # Clean up
-            
-            # Log feature importance
+            # Log feature importance as artifact
             if hasattr(self.model, 'feature_importances_'):
                 feature_importance = pd.DataFrame({
                     'feature': self.feature_names,
                     'importance': self.model.feature_importances_
                 }).sort_values('importance', ascending=False)
                 
+                # Save feature importance to temporary file
                 feature_importance.to_csv('feature_importance.csv', index=False)
                 mlflow.log_artifact('feature_importance.csv')
-                Path('feature_importance.csv').unlink()  # Clean up
+                
+                # Clean up temporary file
+                Path('feature_importance.csv').unlink()
+                
+                logger.info("Feature importance logged to MLflow")
             
             logger.info(f"Experiment logged to MLflow. Run ID: {run.info.run_id}")
+            logger.info("To view results, run: python -m mlflow ui --backend-store-uri ./mlruns --port 5000")
             return run.info.run_id
     
     def save_model(self, model_path: str = "models/madrid_housing_model.pkl") -> None:
@@ -434,6 +474,7 @@ def main():
         print(f"Training completed! Run ID: {results['run_id']}")
         print(f"Test RMSE: {results['metrics']['rmse']:.2f}")
         print(f"Test R²: {results['metrics']['r2']:.3f}")
+        print("To view MLflow UI: mlflow ui --backend-store-uri ./mlruns --port 5000")
 
 
 if __name__ == "__main__":
