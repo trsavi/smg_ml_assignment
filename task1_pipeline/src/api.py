@@ -5,6 +5,7 @@ Endpoints:
 - GET /health -> service status
 - GET /model/info -> model metadata
 - POST /predict -> make single prediction and save request JSON
+- POST /batch_predict -> make batch predictions and save request JSON
 """
 
 from fastapi import FastAPI, HTTPException
@@ -69,6 +70,11 @@ class PredictionRequest(BaseModel):
     district_id_18: bool
     district_id_19: bool
     district_id_20: bool
+
+
+class BatchPredictionRequest(BaseModel):
+    """Request model for batch predictions."""
+    data: list[PredictionRequest]
 
 
 def load_model(model_path: str = "models/madrid_housing_model.pkl"):
@@ -148,6 +154,38 @@ async def predict(request: PredictionRequest):
     except Exception as e:
         logger.error(f"Prediction failed: {e}")
         raise HTTPException(status_code=400, detail=f"Prediction failed: {str(e)}")
+
+
+@app.post("/batch_predict")
+async def batch_predict(request: BatchPredictionRequest):
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    try:
+        # Convert list of requests to list of dicts
+        batch_data = [item.dict() for item in request.data]
+        
+        # Save batch request
+        save_request_json({"batch_data": batch_data, "count": len(batch_data)})
+        
+        logger.info(f"Batch prediction request received with {len(batch_data)} records")
+        
+        # Convert to DataFrame
+        X = pd.DataFrame(batch_data)
+        
+        # Make predictions
+        predictions = model.predict(X)
+        
+        logger.info(f"Batch prediction completed: {len(predictions)} predictions made")
+        
+        return {
+            "predictions": [float(p) for p in predictions],
+            "count": len(predictions)
+        }
+        
+    except Exception as e:
+        logger.error(f"Batch prediction failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Batch prediction failed: {str(e)}")
 
 
 if __name__ == "__main__":
