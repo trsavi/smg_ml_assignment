@@ -225,20 +225,15 @@ class MadridHousingTrainer:
         mae = mean_absolute_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
         
-        # Calculate MAPE
-        mape = np.mean(np.abs((y_test - y_pred) / np.where(y_test != 0, y_test, 1))) * 100
-        
         metrics = {
             'rmse': rmse,
             'mae': mae,
-            'r2': r2,
-            'mape': mape
+            'r2': r2
         }
         
         logger.info(f"Test RMSE: {rmse:.2f}")
         logger.info(f"Test MAE: {mae:.2f}")
         logger.info(f"Test R²: {r2:.3f}")
-        logger.info(f"Test MAPE: {mape:.2f}%")
         
         return metrics
     
@@ -359,8 +354,11 @@ class MadridHousingTrainer:
             # Train model with validation set
             self.train_model(X_train, y_train, X_val, y_val)
             
-            # Log training to MLflow (without evaluation metrics)
-            run_id = self.log_to_mlflow(self.model, run_name=run_name, run_type='training')
+            # Evaluate model on test set to get metrics
+            test_metrics = self.evaluate_model(X_test, y_test)
+            
+            # Log training to MLflow with metrics
+            run_id = self.log_to_mlflow(self.model, metrics=test_metrics, run_name=run_name, run_type='training')
             
             # Save model
             self.save_model()
@@ -372,6 +370,7 @@ class MadridHousingTrainer:
                 'run_id': run_id,
                 'model': self.model,
                 'preprocessor': self.preprocessor,
+                'metrics': test_metrics,
                 'data_splits': {
                     'X_train': X_train,
                     'X_val': X_val,
@@ -415,14 +414,18 @@ class MadridHousingTrainer:
                 # Train model with this configuration
                 self.train_model(X_train, y_train, X_val, y_val)
                 
-                # Log training to MLflow (without metrics)
-                run_id = self.log_to_mlflow(self.model, run_name=exp_config['run_name'], run_type='training')
+                # Evaluate model on test set to get metrics
+                test_metrics = self.evaluate_model(X_test, y_test)
+                
+                # Log training to MLflow with metrics
+                run_id = self.log_to_mlflow(self.model, metrics=test_metrics, run_name=exp_config['run_name'], run_type='training')
                 
                 # Store results
                 results[exp_config['run_name']] = {
                     'run_id': run_id,
                     'model': self.model,
                     'preprocessor': self.preprocessor,
+                    'metrics': test_metrics,
                     'description': exp_config.get('description', '')
                 }
                 

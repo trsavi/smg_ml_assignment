@@ -106,7 +106,7 @@ experiments:
 
 # Grid search configuration
 grid_search:
-  enabled: false
+  enabled: true
   parameters:
     learning_rate: [0.05, 0.1, 0.15]
     num_leaves: [31, 50, 100]

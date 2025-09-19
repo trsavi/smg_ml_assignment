@@ -50,15 +50,15 @@ python scripts/data_prep.py         # Direct script execution
 ```bash
 # Train single model (choose one method)
 make train                          # Using Makefile
-python scripts/train.py single      # Direct script execution
+python scripts/train_model.py single      # Direct script execution
 
 # Train multiple experiments
 make train-experiments              # Using Makefile
-python scripts/train.py experiments # Direct script execution
+python scripts/train_model.py experiments # Direct script execution
 
 # Train with grid search tuning
 make train-grid                     # Using Makefile
-python scripts/train.py grid-search # Direct script execution
+python scripts/train_model.py grid-search # Direct script execution
 ```
 
 ### 4. Model Evaluation
@@ -172,9 +172,9 @@ For development and debugging, you can run scripts directly:
 python scripts/data_prep.py
 
 # Model training options
-python scripts/train.py single        # Single model training
-python scripts/train.py experiments   # Multiple experiments
-python scripts/train.py grid-search   # Grid search tuning
+python scripts/train_model.py single        # Single model training
+python scripts/train_model.py experiments   # Multiple experiments
+python scripts/train_model.py grid-search   # Grid search tuning
 
 # Model evaluation (requires trained model)
 python scripts/evaluate.py
@@ -196,10 +196,10 @@ Most scripts support command-line arguments for customization:
 
 ```bash
 # Training with custom experiment name
-python scripts/train.py single --run-name "my_experiment"
+python scripts/train_model.py single --run-name "my_experiment"
 
 # Training with custom config
-python scripts/train.py experiments --config custom_config.yaml
+python scripts/train_model.py experiments --config custom_config.yaml
 
 # Evaluation with custom model path
 python scripts/evaluate.py --model-path "models/my_model.pkl"
@@ -212,7 +212,7 @@ python scripts/serve.py predict --host localhost --port 8080
 
 # Get help for any script
 python scripts/data_prep.py --help
-python scripts/train.py --help
+python scripts/train_model.py --help
 python scripts/evaluate.py --help
 python scripts/serve.py --help
 ```
@@ -249,7 +249,7 @@ python scripts/serve.py --help
 ### Evaluation (`scripts/evaluate.py`)
 - **Loads trained models** from disk
 - **Evaluates performance** on test data
-- **Calculates metrics** (RMSE, MAE, R², MAPE)
+- **Calculates metrics** (RMSE, MAE, R²)
 - **Logs evaluation results** to MLflow
 - **Independent of training** - can evaluate any trained model
 
@@ -395,7 +395,7 @@ The pipeline includes comprehensive MLflow experiment tracking:
 
 - **Experiment Management**: All training runs are logged with MLflow
 - **Parameter Tracking**: Hyperparameters and configuration are recorded
-- **Metrics Logging**: Performance metrics (RMSE, R², MAE, MAPE) are tracked
+- **Metrics Logging**: Performance metrics (RMSE, R², MAE) are tracked
 - **Model Registry**: Trained models are registered and versioned
 - **Artifact Storage**: Feature importance plots and model artifacts are saved
 

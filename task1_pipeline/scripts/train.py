@@ -17,7 +17,7 @@ import logging
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-from train import MadridHousingTrainer
+from train_model import MadridHousingTrainer
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

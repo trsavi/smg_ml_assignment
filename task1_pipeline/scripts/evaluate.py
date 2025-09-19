@@ -49,20 +49,15 @@ def evaluate_model_on_test_data(model, X_test, y_test):
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     
-    # Calculate MAPE
-    mape = np.mean(np.abs((y_test - y_pred) / np.where(y_test != 0, y_test, 1))) * 100
-    
     metrics = {
         'rmse': rmse,
         'mae': mae,
-        'r2': r2,
-        'mape': mape
+        'r2': r2
     }
     
     logger.info(f"Test RMSE: {rmse:.2f}")
     logger.info(f"Test MAE: {mae:.2f}")
     logger.info(f"Test R²: {r2:.3f}")
-    logger.info(f"Test MAPE: {mape:.2f}%")
     
     return metrics
 
@@ -106,7 +101,6 @@ def main():
         print(f"Test RMSE: {metrics['rmse']:.2f}")
         print(f"Test MAE: {metrics['mae']:.2f}")
         print(f"Test R²: {metrics['r2']:.3f}")
-        print(f"Test MAPE: {metrics['mape']:.2f}%")
         print("\nTo view MLflow UI: mlflow ui --backend-store-uri ./mlruns --port 5000")
         
     except Exception as e:
