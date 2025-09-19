@@ -242,48 +242,35 @@ class MadridHousingTrainer:
         
         return metrics
     
-    def _calculate_data_version(self) -> Dict[str, str]:
-        """Calculate data versioning information."""
-        import hashlib
-        
+
+    def _get_data_version_info(self) -> Dict[str, str]:
+        """Get simple data versioning information."""
         data_info = {}
         
-        # Calculate hash of preprocessed data
+        # Simple data info
         preprocessed_path = Path("data/preprocessed_houses_Madrid.csv")
         if preprocessed_path.exists():
-            hash_md5 = hashlib.md5()
-            with open(preprocessed_path, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    hash_md5.update(chunk)
-            data_info['preprocessed_data_hash'] = hash_md5.hexdigest()
-            data_info['preprocessed_data_size'] = str(preprocessed_path.stat().st_size)
-            data_info['preprocessed_data_rows'] = str(len(pd.read_csv(preprocessed_path)))
+            data_info['data_version'] = 'preprocessed'
+            data_info['data_rows'] = str(len(pd.read_csv(preprocessed_path)))
         else:
-            data_info['preprocessed_data_hash'] = 'unknown'
-            data_info['preprocessed_data_size'] = 'unknown'
-            data_info['preprocessed_data_rows'] = 'unknown'
-        
-        # Calculate hash of original data
-        original_path = Path(self.config['data']['source_path'])
-        if original_path.exists():
-            hash_md5 = hashlib.md5()
-            with open(original_path, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    hash_md5.update(chunk)
-            data_info['original_data_hash'] = hash_md5.hexdigest()
-            data_info['original_data_size'] = str(original_path.stat().st_size)
-            data_info['original_data_rows'] = str(len(pd.read_csv(original_path)))
-        else:
-            data_info['original_data_hash'] = 'unknown'
-            data_info['original_data_size'] = 'unknown'
-            data_info['original_data_rows'] = 'unknown'
+            data_info['data_version'] = 'unknown'
+            data_info['data_rows'] = 'unknown'
         
         return data_info
 
-    def log_to_mlflow(self, metrics: Dict[str, float], run_name: str = None) -> str:
-        """Log experiment to MLflow with hyperparameters, metrics, and artifacts."""
+    def log_to_mlflow(self, model, metrics: Dict[str, float] = None, run_name: str = None, 
+                     run_type: str = 'training') -> str:
+        """
+        Unified MLflow logging method for training, evaluation, or any experiment.
+        
+        Args:
+            model: The trained model to log
+            metrics: Optional metrics to log (for evaluation runs)
+            run_name: Optional custom run name
+            run_type: Type of run ('training', 'evaluation', 'experiment')
+        """
         logger.info("=" * 60)
-        logger.info("LOGGING TO MLFLOW")
+        logger.info(f"LOGGING {run_type.upper()} TO MLFLOW")
         logger.info("=" * 60)
         
         # Set MLflow tracking URI (local file backend)
@@ -295,30 +282,35 @@ class MadridHousingTrainer:
         
         # Start run
         with mlflow.start_run(run_name=run_name) as run:
-            # Log hyperparameters
-            mlflow.log_params(self.config['model'])
-            mlflow.log_params(self.config['training'])
-            mlflow.log_params(self.config['data'])
+            # Log run type
+            mlflow.log_param('run_type', run_type)
             
-            # Log data versioning information
-            data_version_info = self._calculate_data_version()
-            mlflow.log_params(data_version_info)
+            # Log hyperparameters (for training runs)
+            if run_type in ['training', 'experiment']:
+                mlflow.log_params(self.config['model'])
+                mlflow.log_params(self.config['training'])
+                mlflow.log_params(self.config['data'])
+                
+                # Log simple data versioning info
+                data_version_info = self._get_data_version_info()
+                mlflow.log_params(data_version_info)
             
-            # Log metrics
-            mlflow.log_metrics(metrics)
+            # Log metrics (for evaluation runs or when provided)
+            if metrics:
+                mlflow.log_metrics(metrics)
             
-            # Log the trained model artifact
+            # Log the model artifact
             mlflow.lightgbm.log_model(
-                lgb_model=self.model,
+                lgb_model=model,
                 artifact_path="model",
                 registered_model_name="madrid_housing_model"
             )
             
             # Log feature importance as artifact
-            if hasattr(self.model, 'feature_importances_'):
+            if hasattr(model, 'feature_importances_'):
                 feature_importance = pd.DataFrame({
                     'feature': self.feature_names,
-                    'importance': self.model.feature_importances_
+                    'importance': model.feature_importances_
                 }).sort_values('importance', ascending=False)
                 
                 # Save feature importance to temporary file
@@ -330,7 +322,7 @@ class MadridHousingTrainer:
                 
                 logger.info("Feature importance logged to MLflow")
             
-            logger.info(f"Experiment logged to MLflow. Run ID: {run.info.run_id}")
+            logger.info(f"{run_type.capitalize()} logged to MLflow. Run ID: {run.info.run_id}")
             logger.info("To view results, run: python -m mlflow ui --backend-store-uri ./mlruns --port 5000")
             return run.info.run_id
     
@@ -356,7 +348,7 @@ class MadridHousingTrainer:
         logger.info(f"Model saved to {model_path}")
     
     def run_training_pipeline(self, run_name: str = None) -> Dict[str, Any]:
-        """Run the complete training pipeline."""
+        """Run the complete training pipeline (training only)."""
         logger.info("Starting Madrid Housing Market Training Pipeline")
         logger.info("=" * 80)
         
@@ -367,22 +359,27 @@ class MadridHousingTrainer:
             # Train model with validation set
             self.train_model(X_train, y_train, X_val, y_val)
             
-            # Evaluate model on test set
-            metrics = self.evaluate_model(X_test, y_test)
-            
-            # Log to MLflow
-            run_id = self.log_to_mlflow(metrics, run_name)
+            # Log training to MLflow (without evaluation metrics)
+            run_id = self.log_to_mlflow(self.model, run_name=run_name, run_type='training')
             
             # Save model
             self.save_model()
             
             logger.info("Training pipeline completed successfully!")
+            logger.info("Note: Use evaluate_model.py script to evaluate the trained model.")
             
             return {
                 'run_id': run_id,
-                'metrics': metrics,
                 'model': self.model,
-                'preprocessor': self.preprocessor
+                'preprocessor': self.preprocessor,
+                'data_splits': {
+                    'X_train': X_train,
+                    'X_val': X_val,
+                    'X_test': X_test,
+                    'y_train': y_train,
+                    'y_val': y_val,
+                    'y_test': y_test
+                }
             }
             
         except Exception as e:
@@ -390,7 +387,7 @@ class MadridHousingTrainer:
             raise
     
     def run_multiple_experiments(self) -> Dict[str, Any]:
-        """Run multiple experiments with different configurations."""
+        """Run multiple experiments with different configurations (training only)."""
         logger.info("Starting Multiple Experiments Training Pipeline")
         logger.info("=" * 80)
         
@@ -418,22 +415,18 @@ class MadridHousingTrainer:
                 # Train model with this configuration
                 self.train_model(X_train, y_train, X_val, y_val)
                 
-                # Evaluate model
-                metrics = self.evaluate_model(X_test, y_test)
-                
-                # Log to MLflow
-                run_id = self.log_to_mlflow(metrics, exp_config['run_name'])
+                # Log training to MLflow (without metrics)
+                run_id = self.log_to_mlflow(self.model, run_name=exp_config['run_name'], run_type='training')
                 
                 # Store results
                 results[exp_config['run_name']] = {
                     'run_id': run_id,
-                    'metrics': metrics,
                     'model': self.model,
                     'preprocessor': self.preprocessor,
                     'description': exp_config.get('description', '')
                 }
                 
-                logger.info(f"Experiment {exp_config['run_name']} completed successfully!")
+                logger.info(f"Experiment {exp_config['run_name']} training completed successfully!")
                 
             except Exception as e:
                 logger.error(f"Experiment {exp_config['run_name']} failed: {e}")
@@ -448,8 +441,128 @@ class MadridHousingTrainer:
         if self.model is not None:
             self.save_model()
         
-        logger.info(f"All {len(experiments)} experiments completed!")
+        logger.info(f"All {len(experiments)} experiments training completed!")
+        logger.info("Note: Use evaluate_model.py script to evaluate the trained models.")
         return results
+
+    def run_grid_search(self) -> Dict[str, Any]:
+        """Run grid search hyperparameter tuning."""
+        logger.info("Starting Grid Search Hyperparameter Tuning")
+        logger.info("=" * 80)
+        
+        # Check if grid search is enabled
+        grid_config = self.config.get('grid_search', {})
+        if not grid_config.get('enabled', False):
+            logger.error("Grid search is not enabled in config. Set grid_search.enabled: true")
+            raise ValueError("Grid search not enabled")
+        
+        param_grid = grid_config.get('parameters', {})
+        if not param_grid:
+            logger.error("No grid search parameters defined in config")
+            raise ValueError("No grid search parameters defined")
+        
+        logger.info("Grid search parameters:")
+        for param, values in param_grid.items():
+            logger.info(f"  {param}: {values}")
+        
+        # Prepare data once
+        X_train, X_val, X_test, y_train, y_val, y_test = self.prepare_data()
+        
+        best_score = float('inf')
+        best_params = None
+        best_run_id = None
+        results = []
+        
+        # Generate all parameter combinations
+        from itertools import product
+        
+        param_names = list(param_grid.keys())
+        param_values = list(param_grid.values())
+        
+        total_combinations = 1
+        for values in param_values:
+            total_combinations *= len(values)
+        
+        logger.info(f"Total parameter combinations: {total_combinations}")
+        logger.info("Starting grid search...")
+        logger.info("-" * 60)
+        
+        for i, combination in enumerate(product(*param_values), 1):
+            params = dict(zip(param_names, combination))
+            
+            logger.info(f"Combination {i}/{total_combinations}: {params}")
+            
+            # Update trainer config with current parameters
+            original_model_config = self.config['model'].copy()
+            self.config['model'].update(params)
+            
+            try:
+                # Train model with current parameters
+                self.train_model(X_train, y_train, X_val, y_val)
+                
+                # Evaluate on validation set
+                val_metrics = self.evaluate_model(X_val, y_val)
+                val_rmse = val_metrics['rmse']
+                
+                # Log to MLflow
+                run_name = f"grid_search_{i}_{'_'.join([f'{k}_{v}' for k, v in params.items()])}"
+                run_id = self.log_to_mlflow(self.model, metrics=val_metrics, run_name=run_name, run_type='grid_search')
+                
+                result = {
+                    'params': params,
+                    'run_id': run_id,
+                    'val_rmse': val_rmse,
+                    'val_metrics': val_metrics
+                }
+                results.append(result)
+                
+                logger.info(f"  Validation RMSE: {val_rmse:.2f}, Run ID: {run_id}")
+                
+                # Check if this is the best so far
+                if val_rmse < best_score:
+                    best_score = val_rmse
+                    best_params = params
+                    best_run_id = run_id
+                    logger.info(f"  *** New best score! ***")
+                
+            except Exception as e:
+                logger.error(f"  Failed: {e}")
+                results.append({
+                    'params': params,
+                    'error': str(e)
+                })
+            
+            finally:
+                # Restore original config
+                self.config['model'] = original_model_config
+            
+            logger.info("")
+        
+        # Print grid search results
+        logger.info("=" * 60)
+        logger.info("GRID SEARCH RESULTS")
+        logger.info("=" * 60)
+        logger.info(f"Best parameters: {best_params}")
+        logger.info(f"Best validation RMSE: {best_score:.2f}")
+        logger.info(f"Best run ID: {best_run_id}")
+        
+        # Save best model
+        if best_params:
+            logger.info("Training final model with best parameters...")
+            self.config['model'].update(best_params)
+            self.train_model(X_train, y_train, X_val, y_val)
+            self.save_model()
+            logger.info("Best model saved to: models/madrid_housing_model.pkl")
+        
+        logger.info("Grid search completed!")
+        logger.info("Note: Use evaluate_model.py script to evaluate the best model.")
+        
+        return {
+            'best_params': best_params,
+            'best_score': best_score,
+            'best_run_id': best_run_id,
+            'all_results': results
+        }
 
 
 def main():
@@ -461,10 +574,10 @@ def main():
         # Run multiple experiments
         results = trainer.run_multiple_experiments()
         
-        print(f"Multiple experiments completed!")
+        print(f"Multiple experiments training completed!")
         for exp_name, result in results.items():
             if 'error' not in result:
-                print(f"  {exp_name}: RMSE={result['metrics']['rmse']:.2f}, R²={result['metrics']['r2']:.3f}")
+                print(f"  {exp_name}: Training completed - Run ID: {result['run_id']}")
             else:
                 print(f"  {exp_name}: FAILED - {result['error']}")
     else:
@@ -472,8 +585,7 @@ def main():
         results = trainer.run_training_pipeline(run_name=f"madrid_housing_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         
         print(f"Training completed! Run ID: {results['run_id']}")
-        print(f"Test RMSE: {results['metrics']['rmse']:.2f}")
-        print(f"Test R²: {results['metrics']['r2']:.3f}")
+        print("To evaluate the model, run: python scripts/evaluate_model.py")
         print("To view MLflow UI: mlflow ui --backend-store-uri ./mlruns --port 5000")
 
 

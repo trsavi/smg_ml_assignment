@@ -1,0 +1,14 @@
+artifact_uri: file:C:/Users/User/Documents/Projects/SMG Assignment/smg_ml_assignment/task1_pipeline/mlruns/637154332974651797/9cf5c7167007474081bc0ca83561e884/artifacts
+end_time: 1758305445898
+entry_point_name: ''
+experiment_id: '637154332974651797'
+lifecycle_stage: active
+run_id: 9cf5c7167007474081bc0ca83561e884
+run_name: tuned_model
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1758305439106
+status: 3
+tags: []
+user_id: User

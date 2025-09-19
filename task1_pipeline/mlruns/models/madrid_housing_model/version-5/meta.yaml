@@ -1,0 +1,18 @@
+aliases: []
+creation_timestamp: 1758305438643
+current_stage: None
+deployment_job_state: null
+description: null
+last_updated_timestamp: 1758305438643
+metrics: null
+model_id: m-23b2b915c3cc4d6c9a3402bc849eaeb0
+name: madrid_housing_model
+params: null
+run_id: b2cf435a6d954ceb98c1196962800aec
+run_link: null
+source: models:/m-23b2b915c3cc4d6c9a3402bc849eaeb0
+status: READY
+status_message: null
+storage_location: file:C:/Users/User/Documents/Projects/SMG Assignment/smg_ml_assignment/task1_pipeline/mlruns/637154332974651797/models/m-23b2b915c3cc4d6c9a3402bc849eaeb0/artifacts
+user_id: null
+version: 5

@@ -1,0 +1,21 @@
+artifact_path: file:C:/Users/User/Documents/Projects/SMG Assignment/smg_ml_assignment/task1_pipeline/mlruns/637154332974651797/models/m-23b2b915c3cc4d6c9a3402bc849eaeb0/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.pkl
+    lgb_version: 4.6.0
+    model_class: lightgbm.sklearn.LGBMRegressor
+  python_function:
+    data: model.pkl
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.13.7
+mlflow_version: 3.4.0
+model_id: m-23b2b915c3cc4d6c9a3402bc849eaeb0
+model_size_bytes: 172205
+model_uuid: m-23b2b915c3cc4d6c9a3402bc849eaeb0
+prompts: null
+run_id: b2cf435a6d954ceb98c1196962800aec
+utc_time_created: '2025-09-19 18:10:27.405700'

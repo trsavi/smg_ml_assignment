@@ -1,6 +1,6 @@
 # Makefile for Madrid Housing Market ML Pipeline
 
-.PHONY: help install prepare-data train evaluate serve clean test
+.PHONY: help install prepare-data train train-experiments train-grid evaluate serve test-health test-model-info test-predict test-batch-predict clean test
 
 # Default target
 help: ## Show this help message
@@ -17,27 +17,49 @@ install: ## Install required packages
 # Data preparation
 prepare-data: ## Prepare and preprocess the dataset
 	@echo "Preparing data..."
-	python scripts/prepare_data.py
+	python scripts/data_prep.py
 
 # Training
-train: ## Train the model
+train: ## Train the model (single training)
 	@echo "Training model..."
-	cd src && python train.py
+	python scripts/train.py single
+
+# Training with experiments
+train-experiments: ## Train multiple experiments
+	@echo "Training experiments..."
+	python scripts/train.py experiments
+
+# Training with grid search
+train-grid: ## Train with grid search
+	@echo "Training with grid search..."
+	python scripts/train.py grid-search
 
 # Evaluation
 evaluate: ## Evaluate the trained model
 	@echo "Evaluating model..."
-	python scripts/evaluate_model.py
+	python scripts/evaluate.py
 
 # Model serving
 serve: ## Start the FastAPI server
 	@echo "Starting API server..."
-	cd src && python api.py
+	python scripts/serve.py start
 
-# Development server
-serve-dev: ## Start the FastAPI server in development mode
-	@echo "Starting development server..."
-	cd src && uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+# Test specific endpoints
+test-health: ## Test health check endpoint
+	@echo "Testing health check..."
+	python scripts/serve.py health_check
+
+test-model-info: ## Test model info endpoint
+	@echo "Testing model info..."
+	python scripts/serve.py model_info
+
+test-predict: ## Test prediction endpoint
+	@echo "Testing prediction..."
+	python scripts/serve.py predict
+
+test-batch-predict: ## Test batch prediction endpoint
+	@echo "Testing batch prediction..."
+	python scripts/serve.py batch_predict
 
 # MLflow UI
 mlflow-ui: ## Start MLflow UI to view experiments
@@ -59,8 +81,17 @@ clean: ## Clean up generated files
 	find . -name "*.pyc" -delete
 	find . -name "*.pyo" -delete
 
+# Training only (without evaluation)
+train-only: prepare-data train ## Train model only (without evaluation)
+
 # Full pipeline
-pipeline: prepare-data train evaluate ## Run the complete pipeline
+pipeline: prepare-data train evaluate ## Run the complete pipeline (train then evaluate)
+
+# Pipeline with experiments
+pipeline-experiments: prepare-data train-experiments evaluate ## Run pipeline with multiple experiments
+
+# Pipeline with grid search
+pipeline-grid: prepare-data train-grid evaluate ## Run pipeline with grid search tuning
 
 # Docker commands
 docker-build: ## Build Docker image
@@ -78,10 +109,6 @@ docker-compose-down: ## Stop docker-compose services
 docker-compose-logs: ## View docker-compose logs
 	docker-compose logs -f
 
-# API testing
-test-api: ## Test API endpoints
-	@echo "Testing API endpoints..."
-	python scripts/test_api.py
 
 # Documentation
 docs: ## Generate documentation

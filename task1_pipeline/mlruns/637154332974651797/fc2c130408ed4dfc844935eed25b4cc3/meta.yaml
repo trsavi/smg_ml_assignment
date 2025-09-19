@@ -1,0 +1,14 @@
+artifact_uri: file:C:/Users/User/Documents/Projects/SMG Assignment/smg_ml_assignment/task1_pipeline/mlruns/637154332974651797/fc2c130408ed4dfc844935eed25b4cc3/artifacts
+end_time: 1758305453939
+entry_point_name: ''
+experiment_id: '637154332974651797'
+lifecycle_stage: active
+run_id: fc2c130408ed4dfc844935eed25b4cc3
+run_name: high_performance_model
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1758305446279
+status: 3
+tags: []
+user_id: User
