@@ -196,25 +196,25 @@ Most scripts support command-line arguments for customization:
 
 ```bash
 # Training with custom experiment name
-python scripts/train_model.py single --run-name "my_experiment"
+python .\scripts\train_model.py single --run-name "my_experiment"
 
 # Training with custom config
-python scripts/train_model.py experiments --config custom_config.yaml
+python .\scripts\train_model.py experiments --config custom_config.yaml
 
 # Evaluation with custom model path
-python scripts/evaluate.py --model-path "models/my_model.pkl"
+python .\scripts\evaluate.py --model-path "models/my_model.pkl"
 
 # API serving with custom host/port
-python scripts/serve.py start --host localhost --port 8080
+python .\scripts\serve.py start --host localhost --port 8080
 
 # Test endpoints with custom host/port
-python scripts/serve.py predict --host localhost --port 8080
+python .\scripts\serve.py predict --host localhost --port 8080
 
 # Get help for any script
-python scripts/data_prep.py --help
-python scripts/train_model.py --help
-python scripts/evaluate.py --help
-python scripts/serve.py --help
+python .\scripts\data_prep.py --help
+python .\scripts\train_model.py --help
+python .\scripts\evaluate.py --help
+python .\scripts\serve.py --help
 ```
 
 ### Makefile vs Direct Scripts
@@ -277,65 +277,25 @@ The server will start on `http://127.0.0.1:8000`
 
 ### Health Check
 ```bash
-curl -X GET "http://localhost:8000/health"
+curl.exe -s -X GET http://127.0.0.1:8000/health
 ```
 
 ### Model Information
 ```bash
-curl -X GET "http://localhost:8000/model/info"
+curl.exe -s -X GET http://127.0.0.1:8000/health
 ```
 
 ### Single Prediction (Using Test Case)
 
 Use the provided test case for quick testing:
 ```bash
-curl.exe -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d "@test_cases/test_case_1.json"
+curl.exe -s -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d @api_test_cases\test_case_2.json
 ```
 
 Expected response:
 ```json
 {"prediction":169049.65984043336}
 ```
-
-### Single Prediction (Custom Data)
-```bash
-curl -X POST "http://localhost:8000/predict" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sq_mt_built": 100,
-    "n_rooms": 3,
-    "n_bathrooms": 2,
-    "house_type_id": "HouseType 1: Piso",
-    "neighborhood_id": "Neighborhood 1",
-    "has_ac": true,
-    "has_terrace": false
-  }'
-```
-
-### Batch Prediction
-```bash
-curl -X POST "http://localhost:8000/batch_predict" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": [
-      {
-        "sq_mt_built": 100,
-        "n_rooms": 3,
-        "n_bathrooms": 2,
-        "house_type_id": "HouseType 1: Piso",
-        "neighborhood_id": "Neighborhood 1"
-      },
-      {
-        "sq_mt_built": 150,
-        "n_rooms": 4,
-        "n_bathrooms": 3,
-        "house_type_id": "HouseType 2: Casa o chalet",
-        "neighborhood_id": "Neighborhood 2"
-      }
-    ]
-  }'
-```
-
 
 ## Configuration
 
@@ -368,7 +328,6 @@ python scripts/test_api.py
 ### Test Cases
 
 - **API Test Cases**: Located in `api_test_cases/` directory
-- **Test Data**: Sample data for testing in `test_cases/` directory
 - **Automated Testing**: Scripts for API endpoint validation
 - **Sample Requests**: JSON request examples in `json_requests/` directory
 
@@ -402,7 +361,7 @@ The pipeline includes comprehensive MLflow experiment tracking:
 Access MLflow UI:
 ```bash
 # Start MLflow tracking server
-mlflow ui --backend-store-uri sqlite:///mlruns.db
+python -m mlflow ui --backend-store-uri ./mlruns --port 5000
 ```
 
 ## Production Deployment
@@ -429,7 +388,7 @@ docker-compose up
 - `API_PORT`: API port (default: `8000`)
 
 ## Contributing
-
+ 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
