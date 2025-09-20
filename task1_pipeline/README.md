@@ -289,53 +289,13 @@ curl -X GET "http://localhost:8000/model/info"
 
 Use the provided test case for quick testing:
 ```bash
-curl.exe -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d "@test_cases/test_case_1.json"
+curl.exe -s -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d @api_test_cases\test_case_2.json
 ```
 
 Expected response:
 ```json
 {"prediction":169049.65984043336}
 ```
-
-### Single Prediction (Custom Data)
-```bash
-curl -X POST "http://localhost:8000/predict" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sq_mt_built": 100,
-    "n_rooms": 3,
-    "n_bathrooms": 2,
-    "house_type_id": "HouseType 1: Piso",
-    "neighborhood_id": "Neighborhood 1",
-    "has_ac": true,
-    "has_terrace": false
-  }'
-```
-
-### Batch Prediction
-```bash
-curl -X POST "http://localhost:8000/batch_predict" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": [
-      {
-        "sq_mt_built": 100,
-        "n_rooms": 3,
-        "n_bathrooms": 2,
-        "house_type_id": "HouseType 1: Piso",
-        "neighborhood_id": "Neighborhood 1"
-      },
-      {
-        "sq_mt_built": 150,
-        "n_rooms": 4,
-        "n_bathrooms": 3,
-        "house_type_id": "HouseType 2: Casa o chalet",
-        "neighborhood_id": "Neighborhood 2"
-      }
-    ]
-  }'
-```
-
 
 ## Configuration
 
