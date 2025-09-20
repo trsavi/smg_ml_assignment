@@ -1,0 +1,61 @@
+# Preprocessing configuration for Madrid Housing Market dataset
+
+target_column: "buy_price"
+
+# Columns to drop from the dataset (following exact instructions)
+columns_to_drop:
+  - "Unnamed: 0"
+  - "id"
+  - "title"
+  - "subtitle"
+  - "sq_mt_useful"
+  - "n_floors"
+  - "sq_mt_allotment"
+  - "latitude"
+  - "longitude"
+  - "raw_address"
+  - "is_exact_address_hidden"
+  - "street_name"
+  - "street_number"
+  - "portal"
+  - "floor"
+  - "is_floor_under"
+  - "door"
+  - "operation"
+  - "rent_price"
+  - "rent_price_by_area"
+  - "is_rent_price_known"
+  - "buy_price_by_area"
+  - "is_buy_price_known"
+  - "has_central_heating"
+  - "has_individual_heating"
+  - "are_pets_allowed"
+  - "is_furnished"
+  - "is_kitchen_equipped"
+  - "has_garden"
+  - "is_renewal_needed"
+  - "energy_certificate"
+  - "has_private_parking"
+  - "has_public_parking"
+  - "is_parking_included_in_price"
+  - "parking_price"
+  - "is_orientation_north"
+  - "is_orientation_west"
+  - "is_orientation_south"
+  - "is_orientation_east"
+
+# Boolean columns that should be filled with False for missing values
+boolean_columns:
+  - "has_ac"
+  - "has_fitted_wardrobes"
+  - "has_pool"
+  - "has_terrace"
+  - "has_balcony"
+  - "has_storage_room"
+  - "is_accessible"
+  - "has_green_zones"
+
+# Critical columns - rows with missing values in these columns will be dropped
+critical_columns:
+  - "sq_mt_built"
+  - "n_bathrooms"
