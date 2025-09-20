@@ -15,13 +15,14 @@ import requests
 import json
 from pathlib import Path
 import logging
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
-def start_api_server(host="0.0.0.0", port=8000):
+def start_api_server(host="127.0.0.1", port=8000):
     """Start the FastAPI server."""
     print(f"Starting API server on {host}:{port}...")
     
@@ -38,7 +39,7 @@ def start_api_server(host="0.0.0.0", port=8000):
         sys.exit(1)
 
 
-def test_health_check(host="localhost", port=8000):
+def test_health_check(host="127.0.0.1", port=8000):
     """Test the health check endpoint."""
     print("Testing health check endpoint...")
     try:
@@ -55,7 +56,7 @@ def test_health_check(host="localhost", port=8000):
         return False
 
 
-def test_model_info(host="localhost", port=8000):
+def test_model_info(host="127.0.0.1", port=8000):
     """Test the model info endpoint."""
     print("\nTesting model info endpoint...")
     try:
@@ -72,7 +73,7 @@ def test_model_info(host="localhost", port=8000):
         return False
 
 
-def test_predict(host="localhost", port=8000):
+def test_predict(host="127.0.0.1", port=8000):
     """Test the prediction endpoint using test_case_1.json."""
     print("\nTesting prediction endpoint...")
     
@@ -105,7 +106,7 @@ def test_predict(host="localhost", port=8000):
         return False
 
 
-def test_batch_predict(host="localhost", port=8000):
+def test_batch_predict(host="127.0.0.1", port=8000):
     """Test the batch prediction endpoint using test_case_batch_prediction.json."""
     print("\nTesting batch prediction endpoint...")
     
@@ -155,8 +156,8 @@ Examples:
     
     parser.add_argument('action', choices=['start', 'health_check', 'model_info', 'predict', 'batch_predict'],
                        help='Action to perform: start server or test specific endpoint')
-    parser.add_argument('--host', default='0.0.0.0',
-                       help='Host to bind to (default: 0.0.0.0)')
+    parser.add_argument('--host', default='127.0.0.1',
+                       help='Host to bind to (default: 127.0.0.1)')
     parser.add_argument('--port', type=int, default=8000,
                        help='Port to bind to (default: 8000)')
     

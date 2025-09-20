@@ -76,7 +76,7 @@ Examples:
             print(f"Run ID: {results['run_id']}")
             print(f"Model saved to: models/madrid_housing_model.pkl")
             print("To evaluate the model, run: python scripts/evaluate.py")
-            print("To view MLflow UI: mlflow ui --backend-store-uri ./mlruns --port 5000")
+            print("To view MLflow UI: python -m mlflow ui --backend-store-uri ./mlruns --port 5000")
             
         elif args.mode == 'experiments':
             print("\n" + "=" * 60)
@@ -109,7 +109,7 @@ Examples:
                     print()
             
             print("To evaluate the models, run: python scripts/evaluate.py")
-            print("To view MLflow UI: mlflow ui --backend-store-uri ./mlruns --port 5000")
+            print("To view MLflow UI: python -m mlflow ui --backend-store-uri ./mlruns --port 5000")
             
         elif args.mode == 'grid-search':
             print("\n" + "=" * 60)
@@ -118,30 +118,15 @@ Examples:
             
             # Check if grid search is enabled in config
             grid_config = trainer.config.get('grid_search', {})
-            if not grid_config.get('enabled', False):
-                print("Grid search is not enabled in config.")
-                print("To enable grid search, set 'grid_search.enabled: true' in your config file.")
-                print("Example config:")
-                print("""
-                    grid_search:
-                    enabled: true
-                    parameters:
-                        learning_rate: [0.05, 0.1, 0.15]
-                        num_leaves: [31, 50, 100]
-                        max_depth: [6, 8, 10]
-                        feature_fraction: [0.8, 0.9, 1.0]
-                        """)
-                sys.exit(1)
             
             results = trainer.run_grid_search()
             
             print(f"\nGrid search completed!")
             print(f"Best parameters: {results['best_params']}")
             print(f"Best validation RMSE: {results['best_score']:.2f}")
-            print(f"Best run ID: {results['best_run_id']}")
             print("Best model saved to: models/madrid_housing_model.pkl")
             print("To evaluate the best model, run: python scripts/evaluate.py")
-            print("To view MLflow UI: mlflow ui --backend-store-uri ./mlruns --port 5000")
+            print("To view MLflow UI: python -m mlflow ui --backend-store-uri ./mlruns --port 5000")
         
     except Exception as e:
         logger.error(f"Training failed: {e}")

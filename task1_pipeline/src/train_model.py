@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any, Tuple, List
+from sklearn.model_selection import GridSearchCV
 import logging
 import yaml
 import mlflow
@@ -449,122 +450,67 @@ class MadridHousingTrainer:
         return results
 
     def run_grid_search(self) -> Dict[str, Any]:
-        """Run grid search hyperparameter tuning."""
+        """Run grid search hyperparameter tuning using scikit-learn's GridSearchCV."""
         logger.info("Starting Grid Search Hyperparameter Tuning")
         logger.info("=" * 80)
-        
-        # Check if grid search is enabled
-        grid_config = self.config.get('grid_search', {})
-        if not grid_config.get('enabled', False):
-            logger.error("Grid search is not enabled in config. Set grid_search.enabled: true")
-            raise ValueError("Grid search not enabled")
-        
-        param_grid = grid_config.get('parameters', {})
+
+        grid_config = self.config.get("grid_search", {})
+        param_grid = grid_config.get("parameters", {})
+        cv_folds = grid_config.get("cv_folds", 3)
+        scoring = grid_config.get("scoring", "neg_root_mean_squared_error")
+
         if not param_grid:
             logger.error("No grid search parameters defined in config")
             raise ValueError("No grid search parameters defined")
-        
-        logger.info("Grid search parameters:")
-        for param, values in param_grid.items():
-            logger.info(f"  {param}: {values}")
-        
-        # Prepare data once
+
+        logger.info(f"Grid search parameters from config: {param_grid}")
+        logger.info(f"Cross-validation folds: {cv_folds}")
+        logger.info(f"Scoring metric: {scoring}")
+
+        # Prepare train data
         X_train, X_val, X_test, y_train, y_val, y_test = self.prepare_data()
-        
-        best_score = float('inf')
-        best_params = None
-        best_run_id = None
-        results = []
-        
-        # Generate all parameter combinations
-        from itertools import product
-        
-        param_names = list(param_grid.keys())
-        param_values = list(param_grid.values())
-        
-        total_combinations = 1
-        for values in param_values:
-            total_combinations *= len(values)
-        
-        logger.info(f"Total parameter combinations: {total_combinations}")
-        logger.info("Starting grid search...")
-        logger.info("-" * 60)
-        
-        for i, combination in enumerate(product(*param_values), 1):
-            params = dict(zip(param_names, combination))
-            
-            logger.info(f"Combination {i}/{total_combinations}: {params}")
-            
-            # Update trainer config with current parameters
-            original_model_config = self.config['model'].copy()
-            self.config['model'].update(params)
-            
-            try:
-                # Train model with current parameters
-                self.train_model(X_train, y_train, X_val, y_val)
-                
-                # Evaluate on validation set
-                val_metrics = self.evaluate_model(X_val, y_val)
-                val_rmse = val_metrics['rmse']
-                
-                # Log to MLflow
-                run_name = f"grid_search_{i}_{'_'.join([f'{k}_{v}' for k, v in params.items()])}"
-                run_id = self.log_to_mlflow(self.model, metrics=val_metrics, run_name=run_name, run_type='grid_search')
-                
-                result = {
-                    'params': params,
-                    'run_id': run_id,
-                    'val_rmse': val_rmse,
-                    'val_metrics': val_metrics
-                }
-                results.append(result)
-                
-                logger.info(f"  Validation RMSE: {val_rmse:.2f}, Run ID: {run_id}")
-                
-                # Check if this is the best so far
-                if val_rmse < best_score:
-                    best_score = val_rmse
-                    best_params = params
-                    best_run_id = run_id
-                    logger.info(f"  *** New best score! ***")
-                
-            except Exception as e:
-                logger.error(f"  Failed: {e}")
-                results.append({
-                    'params': params,
-                    'error': str(e)
-                })
-            
-            finally:
-                # Restore original config
-                self.config['model'] = original_model_config
-            
-            logger.info("")
-        
-        # Print grid search results
+
+        # Initialize model with default parameters from config['model']
+        base_model = self.train_model(X_train, y_train, X_val, y_val)
+
+        # Setup GridSearchCV
+        grid_search = GridSearchCV(
+            estimator=base_model,
+            param_grid=param_grid,
+            scoring=scoring,
+            cv=cv_folds,
+            n_jobs=-1,
+            # verbose=2,
+            # return_train_score=True
+        )
+
+        logger.info("Running GridSearchCV...")
+        grid_search.fit(X_train, y_train)
+
+        # Extract best results
+        best_params = grid_search.best_params_
+        best_score = grid_search.best_score_
+        best_estimator = grid_search.best_estimator_
+
         logger.info("=" * 60)
         logger.info("GRID SEARCH RESULTS")
         logger.info("=" * 60)
         logger.info(f"Best parameters: {best_params}")
-        logger.info(f"Best validation RMSE: {best_score:.2f}")
-        logger.info(f"Best run ID: {best_run_id}")
-        
+        logger.info(f"Best CV score: {best_score:.4f}")
+
         # Save best model
-        if best_params:
-            logger.info("Training final model with best parameters...")
-            self.config['model'].update(best_params)
-            self.train_model(X_train, y_train, X_val, y_val)
-            self.save_model()
-            logger.info("Best model saved to: models/madrid_housing_model.pkl")
-        
-        logger.info("Grid search completed!")
-        logger.info("Note: Use evaluate_model.py script to evaluate the best model.")
-        
+        self.model = best_estimator
+        model_path = self.config["model_saving"]["model_path"]
+        joblib.dump(self.model, model_path)
+        logger.info(f"Best model saved to: {model_path}")
+
+        # Optionally log to MLflow
+        # self.log_to_mlflow(best_estimator, metrics={"cv_score": best_score}, run_name="grid_search_best")
+
         return {
-            'best_params': best_params,
-            'best_score': best_score,
-            'best_run_id': best_run_id,
-            'all_results': results
+            "best_params": best_params,
+            "best_score": best_score,
+            "cv_results": grid_search.cv_results_
         }
 
 
@@ -588,8 +534,8 @@ def main():
         results = trainer.run_training_pipeline(run_name=f"madrid_housing_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         
         print(f"Training completed! Run ID: {results['run_id']}")
-        print("To evaluate the model, run: python scripts/evaluate_model.py")
-        print("To view MLflow UI: mlflow ui --backend-store-uri ./mlruns --port 5000")
+        print("To evaluate the model, run: python .\scripts\evaluate_model.py")
+        print("To view MLflow UI: python -m mlflow ui --backend-store-uri ./mlruns --port 5000")
 
 
 if __name__ == "__main__":

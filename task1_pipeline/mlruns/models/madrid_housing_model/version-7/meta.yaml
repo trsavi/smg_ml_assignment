@@ -1,18 +1,18 @@
 aliases: []
-creation_timestamp: 1758305453715
+creation_timestamp: 1758312139248
 current_stage: None
 deployment_job_state: null
 description: null
-last_updated_timestamp: 1758305453715
+last_updated_timestamp: 1758312139248
 metrics: null
-model_id: m-e9f41fda5575418b936d467b223a0917
+model_id: m-69d24b02988646b08ec5309480df83f9
 name: madrid_housing_model
 params: null
-run_id: fc2c130408ed4dfc844935eed25b4cc3
+run_id: 1e68620850bf434c95c1c05775f01baa
 run_link: null
-source: models:/m-e9f41fda5575418b936d467b223a0917
+source: models:/m-69d24b02988646b08ec5309480df83f9
 status: READY
 status_message: null
-storage_location: file:C:/Users/User/Documents/Projects/SMG Assignment/smg_ml_assignment/task1_pipeline/mlruns/637154332974651797/models/m-e9f41fda5575418b936d467b223a0917/artifacts
+storage_location: file:C:/Users/User/Documents/Projects/SMG Assignment/smg_ml_assignment/task1_pipeline/mlruns/857118294801410172/models/m-69d24b02988646b08ec5309480df83f9/artifacts
 user_id: null
 version: 7
