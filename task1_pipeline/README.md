@@ -196,25 +196,25 @@ Most scripts support command-line arguments for customization:
 
 ```bash
 # Training with custom experiment name
-python scripts/train_model.py single --run-name "my_experiment"
+python .\scripts\train_model.py single --run-name "my_experiment"
 
 # Training with custom config
-python scripts/train_model.py experiments --config custom_config.yaml
+python .\scripts\train_model.py experiments --config custom_config.yaml
 
 # Evaluation with custom model path
-python scripts/evaluate.py --model-path "models/my_model.pkl"
+python .\scripts\evaluate.py --model-path "models/my_model.pkl"
 
 # API serving with custom host/port
-python scripts/serve.py start --host localhost --port 8080
+python .\scripts\serve.py start --host localhost --port 8080
 
 # Test endpoints with custom host/port
-python scripts/serve.py predict --host localhost --port 8080
+python .\scripts\serve.py predict --host localhost --port 8080
 
 # Get help for any script
-python scripts/data_prep.py --help
-python scripts/train_model.py --help
-python scripts/evaluate.py --help
-python scripts/serve.py --help
+python .\scripts\data_prep.py --help
+python .\scripts\train_model.py --help
+python .\scripts\evaluate.py --help
+python .\scripts\serve.py --help
 ```
 
 ### Makefile vs Direct Scripts
@@ -277,12 +277,12 @@ The server will start on `http://127.0.0.1:8000`
 
 ### Health Check
 ```bash
-curl -X GET "http://localhost:8000/health"
+curl.exe -s -X GET http://127.0.0.1:8000/health
 ```
 
 ### Model Information
 ```bash
-curl -X GET "http://localhost:8000/model/info"
+curl.exe -s -X GET http://127.0.0.1:8000/health
 ```
 
 ### Single Prediction (Using Test Case)
@@ -328,7 +328,6 @@ python scripts/test_api.py
 ### Test Cases
 
 - **API Test Cases**: Located in `api_test_cases/` directory
-- **Test Data**: Sample data for testing in `test_cases/` directory
 - **Automated Testing**: Scripts for API endpoint validation
 - **Sample Requests**: JSON request examples in `json_requests/` directory
 
@@ -362,7 +361,7 @@ The pipeline includes comprehensive MLflow experiment tracking:
 Access MLflow UI:
 ```bash
 # Start MLflow tracking server
-mlflow ui --backend-store-uri sqlite:///mlruns.db
+python -m mlflow ui --backend-store-uri ./mlruns --port 5000
 ```
 
 ## Production Deployment
@@ -389,7 +388,7 @@ docker-compose up
 - `API_PORT`: API port (default: `8000`)
 
 ## Contributing
-
+ 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
