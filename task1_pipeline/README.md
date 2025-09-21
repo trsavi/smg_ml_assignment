@@ -29,7 +29,7 @@ A production-ready machine learning pipeline for predicting housing prices in Ma
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/trsavi/smg_ml_assignment.git
 cd task1_pipeline
 
 # Install dependencies (choose one method)
@@ -42,7 +42,7 @@ pip install -r requirements.txt # Direct pip install
 ```bash
 # Prepare and preprocess the dataset (choose one method)
 make prepare-data                    # Using Makefile
-python scripts/data_prep.py         # Direct script execution
+python scripts/data_prep.py --store        # Direct script execution
 ```
 
 ### 3. Training
@@ -50,15 +50,15 @@ python scripts/data_prep.py         # Direct script execution
 ```bash
 # Train single model (choose one method)
 make train                          # Using Makefile
-python scripts/train_model.py single      # Direct script execution
+python .\scripts\train_model.py single      # Direct script execution
 
 # Train multiple experiments
 make train-experiments              # Using Makefile
-python scripts/train_model.py experiments # Direct script execution
+python .\scripts\train_model.py experiments # Direct script execution
 
 # Train with grid search tuning
 make train-grid                     # Using Makefile
-python scripts/train_model.py grid-search # Direct script execution
+python .\scripts\train_model.py grid-search # Direct script execution
 ```
 
 ### 4. Model Evaluation
@@ -66,7 +66,7 @@ python scripts/train_model.py grid-search # Direct script execution
 ```bash
 # Evaluate the trained model (choose one method)
 make evaluate                       # Using Makefile
-python scripts/evaluate.py         # Direct script execution
+python .\scripts\evaluate.py         # Direct script execution
 ```
 
 ### 5. Model Serving
@@ -74,7 +74,7 @@ python scripts/evaluate.py         # Direct script execution
 ```bash
 # Start the FastAPI server (choose one method)
 make serve                          # Using Makefile
-python scripts/serve.py start      # Direct script execution
+python .\scripts\serve.py start      # Direct script execution
 
 # Test specific endpoints
 make test-health                    # Test health check
@@ -83,10 +83,10 @@ make test-predict                  # Test prediction
 make test-batch-predict            # Test batch prediction
 
 # Or test directly
-python scripts/serve.py health_check
-python scripts/serve.py model_info
-python scripts/serve.py predict
-python scripts/serve.py batch_predict
+python .\scripts\serve.py health_check
+python .\scripts\serve.py model_info
+python .\scripts\serve.py predict
+python .\scripts\serve.py batch_predict
 ```
 
 ### 6. Test the API
@@ -163,32 +163,6 @@ task1_pipeline/
 | `make pipeline-experiments` | Run pipeline with multiple experiments |
 | `make pipeline-grid` | Run pipeline with grid search tuning |
 
-### Direct Script Execution
-
-For development and debugging, you can run scripts directly:
-
-```bash
-# Data preparation
-python scripts/data_prep.py
-
-# Model training options
-python scripts/train_model.py single        # Single model training
-python scripts/train_model.py experiments   # Multiple experiments
-python scripts/train_model.py grid-search   # Grid search tuning
-
-# Model evaluation (requires trained model)
-python scripts/evaluate.py
-
-# API serving and testing
-python scripts/serve.py start         # Start server
-python scripts/serve.py health_check  # Test health check
-python scripts/serve.py model_info    # Test model info
-python scripts/serve.py predict       # Test prediction
-python scripts/serve.py batch_predict # Test batch prediction
-
-# Start MLflow UI
-mlflow ui --backend-store-uri ./mlruns --port 5000
-```
 
 ### Script Options
 
@@ -237,7 +211,7 @@ python .\scripts\serve.py --help
 - **Feature scaling**: StandardScaler for numeric features
 - **Column selection**: Drops unnecessary columns based on configuration
 
-### Training (`scripts/train.py`)
+### Training (`.\scripts\train.py`)
 - **Multiple training modes**: Single model, experiments, grid search
 - **LightGBM regression** with hyperparameter tuning
 - **Grid search tuning** for key parameters (learning_rate, num_leaves, max_depth, feature_fraction)
@@ -246,14 +220,14 @@ python .\scripts\serve.py --help
 - **Feature importance** analysis and export
 - **Separated from evaluation** - focuses only on training
 
-### Evaluation (`scripts/evaluate.py`)
+### Evaluation (`.\scripts\evaluate.py`)
 - **Loads trained models** from disk
 - **Evaluates performance** on test data
 - **Calculates metrics** (RMSE, MAE, R²)
 - **Logs evaluation results** to MLflow
 - **Independent of training** - can evaluate any trained model
 
-### API Serving (`scripts/serve.py`)
+### API Serving (`.\scripts\serve.py`)
 - **Starts FastAPI server** automatically
 - **Tests specific endpoints** using test case files
 - **Uses predefined test cases** from `api_test_cases/` directory
@@ -322,7 +296,7 @@ make test
 make test-api
 
 # Run specific test cases
-python scripts/test_api.py
+python .\scripts\test_api.py
 ```
 
 ### Test Cases

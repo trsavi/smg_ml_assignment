@@ -1,0 +1,101 @@
+[1mdiff --git a/README.md b/README.md[m
+[1mindex 8ceca46..f716269 100644[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@ -2,29 +2,34 @@[m
+ [m
+ This repository contains the implementation of two main tasks for the SMG Engineer Assessment:[m
+ [m
+[31m-## 📁 Project Structure[m
+[32m+[m[32m## Project Structure[m
+ [m
+ ```[m
+[31m-smg-engineer-assessment/[m
+[32m+[m[32msmg_ml_assignment/[m
+ │[m
+ ├── task1_pipeline/          # Task 1: Production-Ready ML Pipeline[m
+[31m-│   ├── src/[m
+[31m-│   ├── configs/[m
+[31m-│   ├── Makefile[m
+[31m-│   ├── requirements.txt[m
+[31m-│   └── README.md[m
+[32m+[m[32m│   ├── src/                 # Source code modules[m
+[32m+[m[32m│   ├── configs/             # Configuration files[m
+[32m+[m[32m│   ├── data/                # Preprocessed datasets[m
+[32m+[m[32m│   ├── models/              # Trained models and artifacts[m
+[32m+[m[32m│   ├── scripts/             # Utility scripts[m
+[32m+[m[32m│   ├── test_cases/          # Test case files[m
+[32m+[m[32m│   ├── api_test_cases/      # API test cases[m
+[32m+[m[32m│   ├── mlruns/              # MLflow tracking data[m
+[32m+[m[32m│   ├── Makefile             # Build automation[m
+[32m+[m[32m│   ├── requirements.txt     # Python dependencies[m
+[32m+[m[32m│   ├── Dockerfile           # Container configuration[m
+[32m+[m[32m│   ├── docker-compose.yml   # Multi-container setup[m
+[32m+[m[32m│   └── README.md            # Task 1 documentation[m
+ │[m
+ ├── task2_code_quality/      # Task 2: Refactoring & Engineering Excellence[m
+[31m-│   ├── src/[m
+[31m-│   ├── tests/[m
+[31m-│   ├── .pre-commit-config.yaml[m
+[31m-│   ├── pyproject.toml[m
+[31m-│   └── README.md[m
+[32m+[m[32m│   ├── src/                 # Refactored source code[m
+[32m+[m[32m│   └── tests/               # Test suite[m
+ │[m
+[31m-└── .github/workflows/       # CI/CD (shared)[m
+[32m+[m[32m└── README.md                # This file[m
+ ```[m
+ [m
+[31m-## 🚀 Quick Start[m
+[32m+[m[32m## Quick Start[m
+ [m
+ ### Task 1: Production-Ready ML Pipeline[m
+ A complete machine learning pipeline for Madrid Housing Market price prediction with MLflow tracking and FastAPI serving.[m
+[36m@@ -44,29 +49,32 @@[m [mcd task2_code_quality[m
+ # Implementation details in task2_code_quality/README.md[m
+ ```[m
+ [m
+[31m-## 📋 Task Overview[m
+[32m+[m[32m## Task Overview[m
+ [m
+ ### Task 1: Production-Ready ML Pipeline[m
+[31m-- ✅ Data loading and validation[m
+[31m-- ✅ Scikit-learn preprocessing pipeline[m
+[31m-- ✅ LightGBM training with MLflow[m
+[31m-- ✅ FastAPI model serving[m
+[31m-- ✅ Comprehensive documentation[m
+[31m-- ✅ Automation with Makefile[m
+[32m+[m[32m- Data loading and validation[m
+[32m+[m[32m- Scikit-learn preprocessing pipeline[m
+[32m+[m[32m- LightGBM training with MLflow[m
+[32m+[m[32m- FastAPI model serving[m
+[32m+[m[32m- Comprehensive documentation[m
+[32m+[m[32m- Automation with Makefile[m
+[32m+[m[32m- Docker containerization[m
+[32m+[m[32m- MLflow experiment tracking[m
+[32m+[m[32m- API testing framework[m
+ [m
+ ### Task 2: Code Quality & Engineering Excellence[m
+[31m-- 📋 Code refactoring and optimization[m
+[31m-- 📋 Comprehensive testing suite[m
+[31m-- 📋 Linting and formatting (Black, Flake8, MyPy)[m
+[31m-- 📋 Pre-commit hooks[m
+[31m-- 📋 CI/CD pipeline[m
+[31m-- 📋 Documentation improvements[m
+[32m+[m[32m- Code refactoring and optimization[m
+[32m+[m[32m- Comprehensive testing suite[m
+[32m+[m[32m- Linting and formatting (Black, Flake8, MyPy)[m
+[32m+[m[32m- Pre-commit hooks[m
+[32m+[m[32m- CI/CD pipeline[m
+[32m+[m[32m- Documentation improvements[m
+ [m
+[31m-## 🔧 Requirements[m
+[32m+[m[32m## Requirements[m
+ [m
+ - Python 3.8+[m
+ - See individual task requirements.txt files for specific dependencies[m
+ [m
+[31m-## 📞 Contact[m
+[32m+[m[32m## Contact[m
+ [m
+ For questions about this assessment, please refer to the individual task README files.[m

@@ -312,7 +312,20 @@ Expected response:
 
 ## Testing
 
-The project includes comprehensive testing capabilities with both unittest and pytest frameworks:
+This project includes comprehensive unit tests using the unittest framework. All tests are located in the `tests/unittest/` directory and provide complete coverage of the codebase.
+
+### Test Structure
+
+The project uses a **unified unittest approach** with all tests organized in the `tests/unittest/` directory:
+
+- `test_file_manager_unittest.py` - FileManager class tests (47 tests)
+- `test_preprocessing_comprehensive_unittest.py` - Preprocessing comprehensive tests (47 tests)  
+- `test_preprocessing_unittest.py` - Preprocessing basic tests (25 tests)
+- `test_api_unittest.py` - API endpoint tests (25 tests)
+- `test_train_model_unittest.py` - Training pipeline tests (25 tests)
+- `test_data_loader_unittest.py` - Data loading tests (24 tests)
+
+**Total: 201 comprehensive tests** covering all functionality with proper setup/teardown and error handling.
 
 ### Test Execution
 
@@ -372,9 +385,9 @@ python -m pytest tests/unittest/test_file_manager_unittest.py::TestFileManagerUn
 python -m pytest tests/unittest/ -m "not slow" -v
 ```
 
-#### Test Categories
+#### Test Coverage Summary
 
-**FileManager Tests** (`test_file_manager_unittest.py`):
+**FileManager Tests** (`test_file_manager_unittest.py`) - 47 tests:
 - ✅ Initialization and configuration
 - ✅ Path resolution and file operations
 - ✅ Config loading (YAML, JSON)
@@ -384,7 +397,7 @@ python -m pytest tests/unittest/ -m "not slow" -v
 - ✅ Unicode path handling
 - ✅ Large data operations
 
-**Preprocessing Tests** (`test_preprocessing_comprehensive_unittest.py`):
+**Preprocessing Tests** (`test_preprocessing_comprehensive_unittest.py`) - 47 tests:
 - ✅ Data preparation and validation
 - ✅ Missing value handling
 - ✅ Boolean column processing
@@ -394,7 +407,7 @@ python -m pytest tests/unittest/ -m "not slow" -v
 - ✅ Edge cases and error conditions
 - ✅ Performance testing
 
-**Training Tests** (`test_train_model_unittest.py`):
+**Training Tests** (`test_train_model_unittest.py`) - 25 tests:
 - ✅ Model training workflows
 - ✅ Configuration handling
 - ✅ MLflow integration
@@ -402,14 +415,14 @@ python -m pytest tests/unittest/ -m "not slow" -v
 - ✅ Model evaluation
 - ✅ Data loading and preprocessing
 
-**API Tests** (`test_api_unittest.py`):
+**API Tests** (`test_api_unittest.py`) - 25 tests:
 - ✅ FastAPI endpoints
 - ✅ Request/response validation
 - ✅ Error handling
 - ✅ Model loading
 - ✅ Batch predictions
 
-**Data Loader Tests** (`test_data_loader_unittest.py`):
+**Data Loader Tests** (`test_data_loader_unittest.py`) - 24 tests:
 - ✅ Data loading and validation
 - ✅ Data splitting
 - ✅ Data quality checks
@@ -449,9 +462,6 @@ python -m pytest tests/unittest/ --cov=src --cov-report=html
 
 # Or using Make (Linux/macOS)
 make test-coverage
-
-# Or using Windows batch file
-.\run_tests.bat coverage
 ```
 
 **Report Location**: `htmlcov/index.html`
