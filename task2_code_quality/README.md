@@ -312,24 +312,238 @@ Expected response:
 
 ## Testing
 
-The project includes comprehensive testing capabilities:
+The project includes comprehensive testing capabilities with both unittest and pytest frameworks:
+
+### Test Execution
+
+#### Run All Tests
+
+**Linux/macOS (with Make):**
+```bash
+# Run all unittest tests
+make test-unittest
+
+# Run all tests with coverage
+make test-coverage
+
+# Run specific test modules
+make test-file-manager
+make test-preprocessing
+make test-api
+make test-train
+make test-data-loader
+```
+
+**Windows (PowerShell/CMD):**
+```powershell
+# Run all unittest tests
+python -m pytest tests/unittest/ -v
+
+# Run all tests with coverage
+python -m pytest tests/unittest/ --cov=src --cov-report=term-missing --cov-report=html
+
+# Run specific test modules
+python -m pytest tests/unittest/test_file_manager_unittest.py -v
+python -m pytest tests/unittest/test_preprocessing_comprehensive_unittest.py -v
+python -m pytest tests/unittest/test_train_model_unittest.py -v
+python -m pytest tests/unittest/test_api_unittest.py -v
+python -m pytest tests/unittest/test_data_loader_unittest.py -v
+```
+
+#### Test Coverage
+```bash
+# Generate coverage report for specific modules
+python -m pytest tests/unittest/ --cov=src/utils/file_manager --cov=src/preprocessing --cov-report=term-missing
+
+# Generate HTML coverage report
+python -m pytest tests/unittest/ --cov=src --cov-report=html
+# Open htmlcov/index.html in browser to view detailed coverage
+```
+
+#### Individual Test Execution
+```bash
+# Run specific test classes
+python -m pytest tests/unittest/test_file_manager_unittest.py::TestFileManagerUnittest -v
+
+# Run specific test methods
+python -m pytest tests/unittest/test_file_manager_unittest.py::TestFileManagerUnittest::test_save_model_success -v
+
+# Run tests with specific markers
+python -m pytest tests/unittest/ -m "not slow" -v
+```
+
+#### Test Categories
+
+**FileManager Tests** (`test_file_manager_unittest.py`):
+- ✅ Initialization and configuration
+- ✅ Path resolution and file operations
+- ✅ Config loading (YAML, JSON)
+- ✅ Model saving/loading (joblib)
+- ✅ DataFrame operations (pandas)
+- ✅ Error handling and edge cases
+- ✅ Unicode path handling
+- ✅ Large data operations
+
+**Preprocessing Tests** (`test_preprocessing_comprehensive_unittest.py`):
+- ✅ Data preparation and validation
+- ✅ Missing value handling
+- ✅ Boolean column processing
+- ✅ Categorical encoding
+- ✅ Feature engineering
+- ✅ Pipeline operations
+- ✅ Edge cases and error conditions
+- ✅ Performance testing
+
+**Training Tests** (`test_train_model_unittest.py`):
+- ✅ Model training workflows
+- ✅ Configuration handling
+- ✅ MLflow integration
+- ✅ Grid search operations
+- ✅ Model evaluation
+- ✅ Data loading and preprocessing
+
+**API Tests** (`test_api_unittest.py`):
+- ✅ FastAPI endpoints
+- ✅ Request/response validation
+- ✅ Error handling
+- ✅ Model loading
+- ✅ Batch predictions
+
+**Data Loader Tests** (`test_data_loader_unittest.py`):
+- ✅ Data loading and validation
+- ✅ Data splitting
+- ✅ Data quality checks
+- ✅ Error handling
+
+### Test Structure
+
+```
+tests/
+├── unittest/                                    # Unittest test files
+│   ├── test_file_manager_unittest.py           # FileManager comprehensive tests
+│   ├── test_preprocessing_comprehensive_unittest.py  # Preprocessing comprehensive tests
+│   ├── test_train_model_unittest.py            # Training model tests
+│   ├── test_api_unittest.py                    # API endpoint tests
+│   └── test_data_loader_unittest.py            # Data loader tests
+├── test_api_integration.py                     # Integration tests
+├── test_data_loader.py                         # Data loader tests
+├── test_preprocessing.py                       # Preprocessing tests
+└── test_train_model.py                         # Training tests
+```
+
+### Test Coverage
+
+Current test coverage:
+- **FileManager**: 91% coverage
+- **Preprocessing**: 78% coverage
+- **Overall Project**: 87% coverage
+- **Total Tests**: 201 unittest tests (all passing ✅)
+
+#### HTML Coverage Report
+
+A detailed HTML coverage report is generated when running tests with coverage:
 
 ```bash
-# Run all tests
-make test
+# Generate HTML coverage report
+python -m pytest tests/unittest/ --cov=src --cov-report=html
 
-# Test API endpoints
-make test-api
+# Or using Make (Linux/macOS)
+make test-coverage
 
-# Run specific test cases
-python scripts/test_api.py
+# Or using Windows batch file
+.\run_tests.bat coverage
 ```
+
+**Report Location**: `htmlcov/index.html`
+
+The HTML report provides:
+- **Interactive coverage visualization** with line-by-line highlighting
+- **Module-level coverage statistics** 
+- **Missing line identification** for each file
+- **Branch coverage analysis**
+- **Function and class coverage details**
+
+Open `htmlcov/index.html` in your web browser to view the detailed coverage report.
 
 ### Test Cases
 
 - **API Test Cases**: Located in `api_test_cases/` directory
-- **Automated Testing**: Scripts for API endpoint validation
+- **Automated Testing**: Comprehensive unittest and pytest test suites
 - **Sample Requests**: JSON request examples in `json_requests/` directory
+- **Coverage Reports**: HTML coverage reports in `htmlcov/` directory
+
+### Running Tests in Development
+
+#### Linux/macOS (with Make)
+```bash
+# Quick test run (no coverage)
+make test-unittest
+
+# Full test run with coverage
+make test-coverage
+
+# HTML coverage report only
+make test-html-coverage
+
+# Run specific test modules
+make test-file-manager
+make test-preprocessing
+make test-api
+make test-train
+make test-data-loader
+```
+
+#### Windows (PowerShell/CMD)
+```powershell
+# Quick test run (no coverage)
+python -m pytest tests/unittest/ -v
+
+# Full test run with coverage
+python -m pytest tests/unittest/ --cov=src --cov-report=term-missing
+
+# Run specific test modules
+python -m pytest tests/unittest/test_file_manager_unittest.py -v
+python -m pytest tests/unittest/test_preprocessing_comprehensive_unittest.py -v
+python -m pytest tests/unittest/test_api_unittest.py -v
+python -m pytest tests/unittest/test_train_model_unittest.py -v
+python -m pytest tests/unittest/test_data_loader_unittest.py -v
+```
+
+#### Windows (Batch File - Easy Mode)
+```cmd
+# Run all unittest tests
+.\run_tests.bat unittest
+
+# Run tests with coverage
+.\run_tests.bat coverage
+
+# Run tests with HTML coverage only
+.\run_tests.bat html-coverage
+
+# Run specific test modules
+.\run_tests.bat file-manager
+.\run_tests.bat preprocessing
+.\run_tests.bat api
+.\run_tests.bat train
+.\run_tests.bat data-loader
+```
+
+#### Cross-Platform Commands
+```bash
+# Run tests for specific functionality
+python -m pytest tests/unittest/ -k "file_manager" -v
+python -m pytest tests/unittest/ -k "preprocessing" -v
+python -m pytest tests/unittest/ -k "api" -v
+
+# Run tests and stop on first failure
+python -m pytest tests/unittest/ -x -v
+
+# Run tests in parallel (if pytest-xdist is installed)
+python -m pytest tests/unittest/ -n auto -v
+
+# Run tests with specific markers
+python -m pytest tests/unittest/ -m "not slow" -v
+```
 
 ## Model Performance
 

@@ -1,6 +1,6 @@
 # Makefile for Madrid Housing Market ML Pipeline
 
-.PHONY: help install prepare-data train train-experiments train-grid evaluate serve test-health test-model-info test-predict test-batch-predict clean test
+.PHONY: help install prepare-data train train-experiments train-grid evaluate serve test-health test-model-info test-predict test-batch-predict clean test test-unittest test-coverage test-html-coverage test-file-manager test-preprocessing
 
 # Default target
 help: ## Show this help message
@@ -67,9 +67,43 @@ mlflow-ui: ## Start MLflow UI to view experiments
 	mlflow ui --backend-store-uri ./mlruns --port 5000
 
 # Testing
-test: ## Run tests
-	@echo "Running tests..."
+test: ## Run all tests
+	@echo "Running all tests..."
 	python -m pytest tests/ -v
+
+test-unittest: ## Run unittest tests
+	@echo "Running unittest tests..."
+	python -m pytest tests/unittest/ -v
+
+test-coverage: ## Run tests with coverage report
+	@echo "Running tests with coverage..."
+	python -m pytest tests/unittest/ --cov=src --cov-report=term-missing --cov-report=html
+	@echo "HTML coverage report generated in htmlcov/index.html"
+
+test-html-coverage: ## Run tests with HTML coverage report only
+	@echo "Running tests with HTML coverage report..."
+	python -m pytest tests/unittest/ --cov=src --cov-report=html
+	@echo "HTML coverage report generated in htmlcov/index.html"
+
+test-file-manager: ## Run FileManager tests
+	@echo "Running FileManager tests..."
+	python -m pytest tests/unittest/test_file_manager_unittest.py -v
+
+test-preprocessing: ## Run Preprocessing tests
+	@echo "Running Preprocessing tests..."
+	python -m pytest tests/unittest/test_preprocessing_comprehensive_unittest.py -v
+
+test-api: ## Run API tests
+	@echo "Running API tests..."
+	python -m pytest tests/unittest/test_api_unittest.py -v
+
+test-train: ## Run Training tests
+	@echo "Running Training tests..."
+	python -m pytest tests/unittest/test_train_model_unittest.py -v
+
+test-data-loader: ## Run Data Loader tests
+	@echo "Running Data Loader tests..."
+	python -m pytest tests/unittest/test_data_loader_unittest.py -v
 
 # Clean up
 clean: ## Clean up generated files

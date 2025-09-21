@@ -11,13 +11,13 @@ from pathlib import Path
 from typing import Dict, Any, Tuple, List
 from sklearn.model_selection import GridSearchCV
 import logging
-import yaml
 import mlflow
 import mlflow.lightgbm
 import lightgbm as lgb
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.model_selection import cross_val_score, train_test_split
 import joblib
+import yaml
 from datetime import datetime
 import warnings
 import subprocess
@@ -25,6 +25,7 @@ import sys
 
 from data_loader import load_data, split_data
 from preprocessing import MadridHousingPreprocessor
+from utils.file_manager import FileManager
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -39,60 +40,17 @@ class MadridHousingTrainer:
     
     def __init__(self, config_path: str = "configs/training_config.yaml"):
         """Initialize trainer with configuration."""
+        self.file_manager = FileManager()
         self.config_path = Path(config_path)
-        self.config = self._load_config()
+        self.config = self.file_manager.load_training_config(config_path)
         self.preprocessor = None
         self.model = None
         self.feature_names = None
         
-    def _load_config(self) -> Dict[str, Any]:
-        """Load training configuration from YAML file."""
-        try:
-            with open(self.config_path, 'r') as f:
-                config = yaml.safe_load(f)
-            logger.info(f"Configuration loaded from {self.config_path}")
-            return config
-        except Exception as e:
-            logger.error(f"Error loading config: {e}")
-            # Use default configuration if file not found
-            return self._get_default_config()
-    
-    def _get_default_config(self) -> Dict[str, Any]:
-        """Get default training configuration."""
-        return {
-            'data': {
-                'source_path': 'houses_Madrid.csv',
-                'target_column': 'buy_price',
-                'test_size': 0.2,
-                'random_state': 42
-            },
-            'mlflow': {
-                'experiment_name': 'housing_price_experiments',
-                'tracking_uri': './mlruns'
-            },
-            'model': {
-                'objective': 'regression',
-                'metric': 'rmse',
-                'boosting_type': 'gbdt',
-                'num_leaves': 31,
-                'learning_rate': 0.1,
-                'feature_fraction': 0.9,
-                'bagging_fraction': 0.8,
-                'bagging_freq': 5,
-                'verbose': -1,
-                'random_state': 42
-            },
-            'training': {
-                'early_stopping_rounds': 10,
-                'eval_metric': 'rmse',
-                'verbose_eval': 100
-            }
-        }
     
     def _check_preprocessed_data(self) -> bool:
         """Check if preprocessed data file exists."""
-        preprocessed_path = Path("data/preprocessed_houses_Madrid.csv")
-        return preprocessed_path.exists()
+        return self.file_manager.file_exists("data/preprocessed_houses_Madrid.csv")
     
     def _prepare_data_if_needed(self) -> None:
         """Call prepare_data script if preprocessed data doesn't exist."""
@@ -118,11 +76,7 @@ class MadridHousingTrainer:
     
     def _load_preprocessed_data(self) -> pd.DataFrame:
         """Load preprocessed data from file."""
-        preprocessed_path = Path("data/preprocessed_houses_Madrid.csv")
-        if not preprocessed_path.exists():
-            raise FileNotFoundError(f"Preprocessed data not found at {preprocessed_path}")
-        
-        df = pd.read_csv(preprocessed_path)
+        df = self.file_manager.load_dataframe("data/preprocessed_houses_Madrid.csv")
         logger.info(f"Loaded preprocessed data: {df.shape}")
         return df
     
@@ -216,7 +170,7 @@ class MadridHousingTrainer:
         logger.info("=" * 60)
         
         if self.model is None:
-            raise ValueError("Model not trained. Call train_model first.")
+            raise ValueError("No model to evaluate")
         
         # Make predictions
         y_pred = self.model.predict(X_test)
@@ -244,10 +198,10 @@ class MadridHousingTrainer:
         data_info = {}
         
         # Simple data info
-        preprocessed_path = Path("data/preprocessed_houses_Madrid.csv")
-        if preprocessed_path.exists():
+        if self.file_manager.file_exists("data/preprocessed_houses_Madrid.csv"):
             data_info['data_version'] = 'preprocessed'
-            data_info['data_rows'] = str(len(pd.read_csv(preprocessed_path)))
+            df = self.file_manager.load_dataframe("data/preprocessed_houses_Madrid.csv")
+            data_info['data_rows'] = str(len(df))
         else:
             data_info['data_version'] = 'unknown'
             data_info['data_rows'] = 'unknown'
@@ -327,11 +281,8 @@ class MadridHousingTrainer:
         if self.model is None:
             raise ValueError("No model to save. Train model first.")
         
-        # Create models directory
-        Path(model_path).parent.mkdir(parents=True, exist_ok=True)
-        
-        # Save model
-        joblib.dump(self.model, model_path)
+        # Save model using FileManager
+        self.file_manager.save_model(self.model, model_path)
         
         # Save preprocessor (if available)
         if self.preprocessor is not None:
@@ -340,8 +291,6 @@ class MadridHousingTrainer:
             logger.info(f"Preprocessor saved to {preprocessor_path}")
         else:
             logger.info("No preprocessor to save (preprocessing was done separately)")
-        
-        logger.info(f"Model saved to {model_path}")
     
     def run_training_pipeline(self, run_name: str = None) -> Dict[str, Any]:
         """Run the complete training pipeline (training only)."""
@@ -501,7 +450,7 @@ class MadridHousingTrainer:
         # Save best model
         self.model = best_estimator
         model_path = self.config["model_saving"]["model_path"]
-        joblib.dump(self.model, model_path)
+        self.file_manager.save_model(self.model, model_path)
         logger.info(f"Best model saved to: {model_path}")
 
         # Optionally log to MLflow
@@ -534,7 +483,7 @@ def main():
         results = trainer.run_training_pipeline(run_name=f"madrid_housing_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         
         print(f"Training completed! Run ID: {results['run_id']}")
-        print("To evaluate the model, run: python .\scripts\evaluate_model.py")
+        print("To evaluate the model, run: python .\\scripts\\evaluate_model.py")
         print("To view MLflow UI: python -m mlflow ui --backend-store-uri ./mlruns --port 5000")
 
 

@@ -12,12 +12,14 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
 import pandas as pd
-import joblib
 import json
+import joblib
 from pathlib import Path
 from datetime import datetime
 import logging
 import uvicorn
+
+from utils.file_manager import FileManager
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -25,9 +27,10 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Madrid Housing Price Prediction API", version="1.0.0")
 
-# Global model
+# Global model and file manager
 model = None
 model_info = {}
+file_manager = FileManager()
 
 
 class PredictionRequest(BaseModel):
@@ -81,7 +84,7 @@ def load_model(model_path: str = "../models/madrid_housing_model.pkl"):
     """Load trained model from file and extract metadata."""
     global model, model_info
     try:
-        model = joblib.load(model_path)
+        model = file_manager.load_model(model_path)
         logger.info(f"Model loaded from {model_path}")
         
         # Extract model metadata
@@ -111,14 +114,11 @@ def load_model(model_path: str = "../models/madrid_housing_model.pkl"):
 
 def save_request_json(request_data: Dict[str, Any]) -> str:
     """Save raw JSON request for debugging/testing."""
-    requests_dir = Path("json_requests")
-    requests_dir.mkdir(exist_ok=True)
     filename = f"request_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    filepath = requests_dir / filename
-    with open(filepath, "w") as f:
-        json.dump(request_data, f, indent=2)
+    filepath = f"json_requests/{filename}"
+    file_manager.save_json(request_data, filepath)
     logger.info(f"Request saved: {filepath}")
-    return str(filepath)
+    return filepath
 
 
 @app.on_event("startup")

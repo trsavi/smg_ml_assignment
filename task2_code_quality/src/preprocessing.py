@@ -10,8 +10,10 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, Any, List
 import logging
-import yaml
 import joblib
+import yaml
+
+from utils.file_manager import FileManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,21 +23,10 @@ class MadridHousingPreprocessor:
     """Preprocessing pipeline for Madrid Housing Market dataset."""
 
     def __init__(self, config_path: str = "configs/preprocessing_config.yaml"):
-        self.config_path = Path(config_path)
-        self.config = self._load_config()
+        self.file_manager = FileManager()
+        self.config_path = config_path
+        self.config = self.file_manager.load_preprocessing_config(config_path)
         self.preprocessing_params: Dict[str, Any] = {}
-
-    def _load_config(self) -> Dict[str, Any]:
-        """Load preprocessing configuration from YAML file."""
-        try:
-            with open(self.config_path, 'r') as f:
-                config = yaml.safe_load(f)
-            logger.info(f"Configuration loaded from {self.config_path}")
-            return config
-        except Exception as e:
-            logger.warning(f"Error loading config: {e}, using defaults")
-            return {'target_column': 'buy_price', 'columns_to_drop': [], 
-                    'boolean_columns': [], 'critical_columns': []}
 
     def prepare_data(self, df: pd.DataFrame, is_training: bool = True) -> pd.DataFrame:
         """Prepare data for ML models like LightGBM."""
@@ -130,11 +121,11 @@ class MadridHousingPreprocessor:
         return self.prepare_data(X, is_training=False)
 
     def save_pipeline(self, filepath: str) -> None:
-        joblib.dump(self.preprocessing_params, filepath)
+        self.file_manager.save_model(self.preprocessing_params, filepath)
         logger.info(f"Saved preprocessing params → {filepath}")
 
     def load_pipeline(self, filepath: str) -> None:
-        self.preprocessing_params = joblib.load(filepath)
+        self.preprocessing_params = self.file_manager.load_model(filepath)
         logger.info(f"Loaded preprocessing params ← {filepath}")
 
 

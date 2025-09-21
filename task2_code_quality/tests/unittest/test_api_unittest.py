@@ -24,7 +24,7 @@ import pandas as pd
 import numpy as np
 
 # Import the API module
-from api import app, load_model, save_request_json, PredictionRequest, BatchPredictionRequest
+from api import app, load_model, save_request_json, PredictionRequest, BatchPredictionRequest, file_manager
 
 
 class TestAPIComponents(unittest.TestCase):
@@ -127,15 +127,16 @@ class TestAPIComponents(unittest.TestCase):
         """Test saving request JSON to file."""
         test_data = {"test": "data", "value": 123}
         
-        with patch('api.Path.mkdir'), \
-             patch('builtins.open', mock.mock_open()) as mock_file, \
-             patch('api.json.dump') as mock_json_dump:
+        with patch.object(file_manager, 'save_json') as mock_save_json:
+            mock_save_json.return_value = "json_requests/test_file.json"
             
             result = save_request_json(test_data)
             
-            # Verify file was opened for writing
-            mock_file.assert_called_once()
-            mock_json_dump.assert_called_once_with(test_data, mock_file.return_value.__enter__.return_value, indent=2)
+            # Verify FileManager.save_json was called
+            mock_save_json.assert_called_once()
+            call_args = mock_save_json.call_args
+            self.assertEqual(call_args[0][0], test_data)  # First argument should be test_data
+            self.assertTrue(call_args[0][1].startswith("json_requests/"))  # Second argument should be filepath
             
             # Verify return value is a string
             self.assertIsInstance(result, str)
@@ -144,21 +145,15 @@ class TestAPIComponents(unittest.TestCase):
         """Test that save_request_json creates directory if it doesn't exist."""
         test_data = {"test": "data"}
         
-        with patch('api.Path') as mock_path:
-            mock_requests_dir = Mock()
-            mock_path.return_value = mock_requests_dir
-            mock_requests_dir.__truediv__ = Mock(return_value="mock_filepath")
+        with patch.object(file_manager, 'save_json') as mock_save_json:
+            mock_save_json.return_value = "json_requests/test_file.json"
             
-            with patch('builtins.open', mock.mock_open()), \
-                 patch('api.json.dump'):
-                
-                save_request_json(test_data)
-                
-                # Verify mkdir was called with exist_ok=True
-                mock_requests_dir.mkdir.assert_called_once_with(exist_ok=True)
+            save_request_json(test_data)
+            
+            # Verify FileManager.save_json was called (which handles directory creation internally)
+            mock_save_json.assert_called_once()
     
-    @patch('api.joblib.load')
-    def test_load_model_success(self, mock_joblib_load):
+    def test_load_model_success(self):
         """Test successful model loading."""
         # Create mock model
         mock_model = Mock()
@@ -168,30 +163,32 @@ class TestAPIComponents(unittest.TestCase):
         mock_model.num_leaves = 31
         mock_model.objective = 'regression'
         mock_model.random_state = 42
-        mock_joblib_load.return_value = mock_model
         
-        # Load model
-        load_model("test_model.pkl")
-        
-        # Verify model was loaded
-        mock_joblib_load.assert_called_once_with("test_model.pkl")
-        
-        # Verify global model was set
-        from api import model, model_info
-        self.assertEqual(model, mock_model)
-        self.assertIn("model_name", model_info)
-        self.assertEqual(model_info["model_type"], "Mock")
-        self.assertEqual(model_info["algorithm"], "LightGBM")
+        with patch.object(file_manager, 'load_model') as mock_load_model:
+            mock_load_model.return_value = mock_model
+            
+            # Load model
+            load_model("test_model.pkl")
+            
+            # Verify model was loaded
+            mock_load_model.assert_called_once_with("test_model.pkl")
+            
+            # Verify global model was set
+            from api import model, model_info
+            self.assertEqual(model, mock_model)
+            self.assertIn("model_name", model_info)
+            self.assertEqual(model_info["model_type"], "Mock")
+            self.assertEqual(model_info["algorithm"], "LightGBM")
     
-    @patch('api.joblib.load')
-    def test_load_model_failure(self, mock_joblib_load):
+    def test_load_model_failure(self):
         """Test model loading failure."""
-        mock_joblib_load.side_effect = FileNotFoundError("Model file not found")
-        
-        with self.assertRaises(FileNotFoundError):
-            load_model("nonexistent_model.pkl")
-        
-        mock_joblib_load.assert_called_once_with("nonexistent_model.pkl")
+        with patch.object(file_manager, 'load_model') as mock_load_model:
+            mock_load_model.side_effect = FileNotFoundError("Model file not found")
+            
+            with self.assertRaises(FileNotFoundError):
+                load_model("nonexistent_model.pkl")
+            
+            mock_load_model.assert_called_once_with("nonexistent_model.pkl")
 
 
 class TestAPIEndpoints(unittest.TestCase):

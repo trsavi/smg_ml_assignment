@@ -179,3 +179,4 @@ python run_unittest_tests.py coverage
 ## Conclusion
 
 The unittest implementation provides comprehensive testing coverage for the Madrid Housing ML project with a 95.3% success rate and 84% code coverage. The organized structure in `tests/unittest/` separates unittest-based tests from pytest-based tests, making it easy to run different test frameworks as needed. The API module achieves excellent coverage (98%), while other modules have good coverage (70-86%) with room for improvement in error handling and edge case testing.
+
