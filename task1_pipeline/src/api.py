@@ -77,7 +77,7 @@ class BatchPredictionRequest(BaseModel):
     data: list[PredictionRequest]
 
 
-def load_model(model_path: str = "../models/madrid_housing_model.pkl"):
+def load_model(model_path: str = "models/madrid_housing_model.pkl"):
     """Load trained model from file and extract metadata."""
     global model, model_info
     try:

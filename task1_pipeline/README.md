@@ -37,6 +37,167 @@ make install                    # Using Makefile
 pip install -r requirements.txt # Direct pip install
 ```
 
+## Docker Deployment
+
+### Prerequisites
+
+- Docker Desktop installed and running
+- At least 4GB RAM available for Docker
+- Port 8000 available on your system
+
+### Docker Commands
+
+#### 1. Build Docker Image
+
+```bash
+# Build the Docker image
+docker build -t madrid-housing-api .
+
+# Or using docker-compose
+docker-compose build
+```
+
+#### 2. Run Docker Container
+
+```bash
+# Method 1: Using docker-compose (Recommended)
+docker-compose up
+
+# Method 2: Run in background
+docker-compose up -d
+
+# Method 3: Direct docker run
+docker run -p 8000:8000 madrid-housing-api
+```
+
+#### 3. Test Docker Container
+
+```bash
+# Test all endpoints
+python test_docker_predictions.py
+
+# Test individual endpoints
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/model/info
+```
+
+#### 4. Stop Docker Container
+
+```bash
+# Stop and remove containers
+docker-compose down
+
+# Stop all running containers
+docker stop $(docker ps -q)
+```
+
+### Docker Troubleshooting
+
+#### Container Won't Start
+
+```bash
+# Check if Docker is running
+docker --version
+docker ps
+
+# Check container logs
+docker-compose logs
+docker logs <container_name>
+
+# Rebuild from scratch
+docker-compose down
+docker-compose build --no-cache
+docker-compose up
+```
+
+#### Port Already in Use
+
+```bash
+# Check what's using port 8000
+netstat -ano | findstr :8000
+
+# Kill process using port 8000 (Windows)
+taskkill /PID <process_id> /F
+
+# Or use different port
+docker run -p 8001:8000 madrid-housing-api
+```
+
+#### Model Not Loading
+
+```bash
+# Check if model file exists
+ls models/madrid_housing_model.pkl
+
+# Rebuild container to include model
+docker-compose down
+docker-compose up --build
+```
+
+### Docker API Endpoints
+
+Once the container is running, the API is available at:
+
+- **Health Check**: http://127.0.0.1:8000/health
+- **Model Info**: http://127.0.0.1:8000/model/info
+- **Single Prediction**: http://127.0.0.1:8000/predict
+- **Batch Prediction**: http://127.0.0.1:8000/batch_predict
+- **API Documentation**: http://127.0.0.1:8000/docs
+
+### Example API Usage
+
+#### Single Prediction
+
+```bash
+curl -X POST http://127.0.0.1:8000/predict \
+  -H "Content-Type: application/json" \
+  -d @api_test_cases/test_case_1.json
+```
+
+#### Batch Prediction
+
+```bash
+curl -X POST http://127.0.0.1:8000/batch_predict \
+  -H "Content-Type: application/json" \
+  -d @api_test_cases/test_case_batch_prediction.json
+```
+
+### Docker Production Deployment
+
+#### Environment Variables
+
+```bash
+# Set environment variables
+export MODEL_PATH=models/madrid_housing_model.pkl
+export API_HOST=0.0.0.0
+export API_PORT=8000
+
+# Run with environment variables
+docker run -e MODEL_PATH=$MODEL_PATH -e API_HOST=$API_HOST -e API_PORT=$API_PORT -p 8000:8000 madrid-housing-api
+```
+
+#### Docker Compose for Production
+
+```yaml
+version: '3.8'
+services:
+  madrid-housing-api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+    environment:
+      - MODEL_PATH=models/madrid_housing_model.pkl
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
 ### 2. Data Preparation
 
 ```bash
