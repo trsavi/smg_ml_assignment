@@ -18,7 +18,24 @@ from preprocessing import MadridHousingPreprocessor
 
 
 def main():
-    """Prepare and preprocess the dataset."""
+    """
+    Prepare and preprocess the Madrid Housing Market dataset.
+    
+    This function loads the raw dataset, applies preprocessing transformations,
+    and optionally saves the preprocessed data to a CSV file.
+    
+    Args:
+        None: Uses command line arguments for configuration.
+        
+    Returns:
+        None: Prints status messages and saves data if requested.
+        
+    Raises:
+        SystemExit: If data preparation fails.
+        
+    Example:
+        >>> python data_prep.py --store --output-path data/processed.csv
+    """
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Prepare and preprocess Madrid Housing Market dataset')
     parser.add_argument('--store', action='store_true', 

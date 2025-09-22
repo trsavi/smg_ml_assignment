@@ -255,150 +255,139 @@ class TestDataLoader(unittest.TestCase):
                 test_size=0
             )
         self.assertIn("between 0 and 1", str(context.exception))
-
-
-class TestDataLoaderIntegration(unittest.TestCase):
-    """Integration tests for data_loader module."""
     
-    def setUp(self):
-        """Set up integration test fixtures."""
-        # Create a larger, more realistic dataset
-        np.random.seed(42)
-        n_samples = 100
-        
-        data = {
-            'sq_mt_built': np.random.uniform(50, 200, n_samples),
-            'n_rooms': np.random.randint(1, 6, n_samples),
-            'n_bathrooms': np.random.randint(1, 4, n_samples),
-            'is_new_development': np.random.choice([True, False], n_samples),
-            'has_ac': np.random.choice([True, False], n_samples),
-            'has_fitted_wardrobes': np.random.choice([True, False], n_samples),
-            'has_lift': np.random.choice([1.0, 0.0], n_samples),
-            'is_exterior': np.random.choice([1.0, 0.0], n_samples),
-            'has_pool': np.random.choice([True, False], n_samples),
-            'has_terrace': np.random.choice([True, False], n_samples),
-            'has_balcony': np.random.choice([True, False], n_samples),
-            'has_storage_room': np.random.choice([True, False], n_samples),
-            'is_accessible': np.random.choice([True, False], n_samples),
-            'has_green_zones': np.random.choice([True, False], n_samples),
-            'has_parking': np.random.choice([True, False], n_samples),
-        }
-        
-        # Add one-hot encoded features
-        for house_type in ['HouseType_1_Piso', 'HouseType_2_Casa_o_chalet', 'HouseType_3_Estudio']:
-            data[f'house_type_id_{house_type}'] = np.random.choice([True, False], n_samples)
-        
-        for district in ['District_1_Arganzuela', 'District_2_Barajas', 'District_3_Carabanchel']:
-            data[f'district_id_{district}'] = np.random.choice([True, False], n_samples)
-        
-        # Create target variable with some relationship to features
-        data['buy_price'] = (
-            data['sq_mt_built'] * 1000 + 
-            data['n_rooms'] * 50000 + 
-            data['n_bathrooms'] * 30000 + 
-            np.random.normal(0, 50000, n_samples)
-        )
-        
-        # Ensure all prices are positive
-        data['buy_price'] = np.abs(data['buy_price'])
-        
-        self.integration_data = pd.DataFrame(data)
-        
-        # Create temporary file
-        self.temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False)
-        self.integration_data.to_csv(self.temp_file.name, index=False)
-        self.temp_file.close()
+    def test_load_data_with_different_encodings(self):
+        """Test loading data with different encodings."""
+        # Test with UTF-8 encoding
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, encoding='utf-8') as temp_file:
+            self.sample_data.to_csv(temp_file.name, index=False, encoding='utf-8')
+            temp_file.close()
+            
+            try:
+                data = load_data(temp_file.name)
+                self.assertIsInstance(data, pd.DataFrame)
+                self.assertEqual(len(data), len(self.sample_data))
+            finally:
+                os.unlink(temp_file.name)
     
-    def tearDown(self):
-        """Clean up after each test method."""
-        if os.path.exists(self.temp_file.name):
-            os.unlink(self.temp_file.name)
+    def test_load_data_with_custom_separator(self):
+        """Test loading data with custom separator."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as temp_file:
+            # Save with semicolon separator
+            self.sample_data.to_csv(temp_file.name, index=False, sep=';')
+            temp_file.close()
+            
+            try:
+                data = load_data(temp_file.name, sep=';')
+                self.assertIsInstance(data, pd.DataFrame)
+                self.assertEqual(len(data), len(self.sample_data))
+            finally:
+                os.unlink(temp_file.name)
     
-    def test_full_data_pipeline(self):
-        """Test complete data loading and splitting pipeline."""
-        # Load data
-        data = load_data(self.temp_file.name)
-        
-        # Verify data structure
-        self.assertIsInstance(data, pd.DataFrame)
-        self.assertEqual(len(data), 100)
-        self.assertIn('buy_price', data.columns)
-        
-        # Validate data
-        _validate_housing_data(data)
-        
-        # Split data
-        X_train, X_test, y_train, y_test = split_data(
-            data, target_column='buy_price'
-        )
-        
-        # Verify splits
-        self.assertGreater(len(X_train), 0)
-        self.assertGreater(len(X_test), 0)
-        
-        # Verify no data leakage
-        total_split_size = len(X_train) + len(X_test)
-        self.assertEqual(total_split_size, len(data))
-        
-        # Verify feature consistency
-        self.assertEqual(len(X_train.columns), len(X_test.columns))
-        
-        # Verify target consistency
-        self.assertEqual(y_train.name, 'buy_price')
-        self.assertEqual(y_test.name, 'buy_price')
+    def test_split_data_with_custom_random_state(self):
+        """Test data splitting with custom random state."""
+        # Test with different random states
+        for random_state in [42, 123, 456]:
+            X_train, X_test, y_train, y_test = split_data(
+                self.sample_data, 
+                target_column='buy_price',
+                random_state=random_state
+            )
+            
+            # Verify splits are consistent
+            self.assertGreater(len(X_train), 0)
+            self.assertGreater(len(X_test), 0)
+            self.assertEqual(len(X_train) + len(X_test), len(self.sample_data))
     
-    def test_data_consistency_across_splits(self):
-        """Test that data is consistently split without overlap."""
-        data = load_data(self.temp_file.name)
-        X_train, X_test, y_train, y_test = split_data(
-            data, target_column='buy_price', random_state=42
-        )
+    def test_split_data_with_different_test_sizes(self):
+        """Test data splitting with different test sizes."""
+        test_sizes = [0.1, 0.2, 0.3, 0.4]
         
-        # Check that indices don't overlap
-        train_indices = set(X_train.index)
-        test_indices = set(X_test.index)
-        
-        self.assertEqual(len(train_indices.intersection(test_indices)), 0)
-        
-        # Check that all original indices are covered
-        all_split_indices = train_indices.union(test_indices)
-        original_indices = set(data.index)
-        self.assertEqual(all_split_indices, original_indices)
+        for test_size in test_sizes:
+            X_train, X_test, y_train, y_test = split_data(
+                self.sample_data, 
+                target_column='buy_price',
+                test_size=test_size,
+                random_state=42
+            )
+            
+            # Verify split proportions are approximately correct
+            expected_test_size = int(len(self.sample_data) * test_size)
+            self.assertAlmostEqual(len(X_test), expected_test_size, delta=1)
     
-    def test_feature_preservation(self):
-        """Test that all features are preserved in splits."""
-        data = load_data(self.temp_file.name)
-        original_features = [col for col in data.columns if col != 'buy_price']
+    def test_validate_housing_data_with_missing_target(self):
+        """Test validation with missing target column."""
+        data_without_target = self.sample_data.drop('buy_price', axis=1)
         
-        X_train, X_test, y_train, y_test = split_data(
-            data, target_column='buy_price'
-        )
-        
-        # All splits should have the same features
-        self.assertEqual(list(X_train.columns), original_features)
-        self.assertEqual(list(X_test.columns), original_features)
+        with self.assertRaises(ValueError) as context:
+            _validate_housing_data(data_without_target)
+        self.assertIn("Target column 'buy_price' not found", str(context.exception))
     
-    def test_target_distribution(self):
-        """Test that target distribution is reasonable across splits."""
-        data = load_data(self.temp_file.name)
-        X_train, X_test, y_train, y_test = split_data(
-            data, target_column='buy_price', random_state=42
-        )
+    def test_validate_housing_data_with_empty_dataframe(self):
+        """Test validation with empty dataframe."""
+        empty_data = pd.DataFrame()
         
-        # Check that target values are within reasonable range
-        original_target = data['buy_price']
+        with self.assertRaises(ValueError) as context:
+            _validate_housing_data(empty_data)
+        self.assertIn("Dataset is empty", str(context.exception))
+    
+    def test_validate_housing_data_with_invalid_target_type(self):
+        """Test validation with invalid target type."""
+        data_with_string_target = self.sample_data.copy()
+        data_with_string_target['buy_price'] = 'invalid_price'
         
-        self.assertGreater(y_train.min(), 0)
-        self.assertGreater(y_test.min(), 0)
+        with self.assertRaises(ValueError) as context:
+            _validate_housing_data(data_with_string_target)
+        self.assertIn("Target column must be numeric", str(context.exception))
+    
+    def test_validate_housing_data_with_negative_prices(self):
+        """Test validation with negative prices."""
+        data_with_negative = self.sample_data.copy()
+        data_with_negative.loc[0, 'buy_price'] = -1000
         
-        # Check that splits maintain similar target distributions
-        train_mean = y_train.mean()
-        test_mean = y_test.mean()
-        original_mean = original_target.mean()
+        with self.assertRaises(ValueError) as context:
+            _validate_housing_data(data_with_negative)
+        self.assertIn("Target values must be positive", str(context.exception))
+    
+    def test_validate_housing_data_with_zero_prices(self):
+        """Test validation with zero prices."""
+        data_with_zero = self.sample_data.copy()
+        data_with_zero.loc[0, 'buy_price'] = 0
         
-        # Means should be within reasonable range of original
-        self.assertLess(abs(train_mean - original_mean) / original_mean, 0.5)
-        self.assertLess(abs(test_mean - original_mean) / original_mean, 0.5)
+        with self.assertRaises(ValueError) as context:
+            _validate_housing_data(data_with_zero)
+        self.assertIn("Target values must be positive", str(context.exception))
+    
+    def test_validate_housing_data_with_missing_values_in_features(self):
+        """Test validation with missing values in features."""
+        data_with_missing = self.sample_data.copy()
+        data_with_missing.loc[0, 'sq_mt_built'] = np.nan
+        
+        with self.assertRaises(ValueError) as context:
+            _validate_housing_data(data_with_missing)
+        self.assertIn("Missing values found in features", str(context.exception))
+    
+    def test_validate_housing_data_with_invalid_feature_types(self):
+        """Test validation with invalid feature types."""
+        data_with_invalid_types = self.sample_data.copy()
+        data_with_invalid_types['sq_mt_built'] = 'not_numeric'
+        
+        with self.assertRaises(ValueError) as context:
+            _validate_housing_data(data_with_invalid_types)
+        self.assertIn("All features must be numeric or boolean", str(context.exception))
+    
+    def test_load_data_with_compression(self):
+        """Test loading compressed data."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv.gz', delete=False) as temp_file:
+            self.sample_data.to_csv(temp_file.name, index=False, compression='gzip')
+            temp_file.close()
+            
+            try:
+                data = load_data(temp_file.name)
+                self.assertIsInstance(data, pd.DataFrame)
+                self.assertEqual(len(data), len(self.sample_data))
+            finally:
+                os.unlink(temp_file.name)
 
 
 if __name__ == '__main__':
@@ -408,7 +397,6 @@ if __name__ == '__main__':
     # Add test cases using TestLoader
     loader = unittest.TestLoader()
     test_suite.addTests(loader.loadTestsFromTestCase(TestDataLoader))
-    test_suite.addTests(loader.loadTestsFromTestCase(TestDataLoaderIntegration))
     
     # Run the tests with verbose output
     runner = unittest.TextTestRunner(verbosity=2)

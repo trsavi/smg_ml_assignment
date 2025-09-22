@@ -5,18 +5,21 @@ This module provides functions to load and split the Madrid Housing Market datas
 from CSV files with proper data validation.
 """
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from typing import Tuple, Optional
+# Standard library imports
 import logging
+from pathlib import Path
+from typing import Optional, Tuple
+
+# Third-party imports
+import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def load_data(path: str) -> pd.DataFrame:
+def load_data(path: str, **kwargs) -> pd.DataFrame:
     """
     Load Madrid Housing Market dataset from CSV file.
     
@@ -26,6 +29,7 @@ def load_data(path: str) -> pd.DataFrame:
     Args:
         path (str): Path to the CSV file containing the Madrid Housing Market dataset.
                    Can be relative or absolute path.
+        **kwargs: Additional arguments passed to pd.read_csv().
     
     Returns:
         pd.DataFrame: Loaded and validated dataset with proper data types.
@@ -47,13 +51,13 @@ def load_data(path: str) -> pd.DataFrame:
         raise FileNotFoundError(f"Dataset file not found at: {path}")
     
     # Validate file extension
-    if file_path.suffix.lower() != '.csv':
+    if file_path.suffix.lower() not in ['.csv', '.gz']:
         raise ValueError(f"Expected CSV file, got: {file_path.suffix}")
     
     try:
         # Load the dataset
         logger.info(f"Loading Madrid Housing Market dataset from: {path}")
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, **kwargs)
         
         # Validate dataset is not empty
         if df.empty:
@@ -87,6 +91,10 @@ def split_data(df: pd.DataFrame, target_column: str, test_size: float = 0.2,
     """
     Split the dataset into training and testing sets.
     
+    This function separates the input DataFrame into features and target,
+    then splits them into training and testing sets using scikit-learn's
+    train_test_split function.
+    
     Args:
         df (pd.DataFrame): The input DataFrame.
         target_column (str): The name of the target column.
@@ -95,6 +103,13 @@ def split_data(df: pd.DataFrame, target_column: str, test_size: float = 0.2,
     
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]: X_train, X_test, y_train, y_test.
+        
+    Raises:
+        ValueError: If input validation fails.
+        
+    Example:
+        >>> X_train, X_test, y_train, y_test = split_data(df, 'price', test_size=0.2)
+        >>> print(f"Train: {X_train.shape}, Test: {X_test.shape}")
     """
     if not isinstance(df, pd.DataFrame) or df.empty:
         raise ValueError("Input 'df' must be a non-empty pandas DataFrame.")
@@ -133,11 +148,20 @@ def _validate_housing_data(df: pd.DataFrame) -> None:
     """
     Validate that the loaded data appears to be a Madrid Housing Market dataset.
     
+    This function performs basic validation checks to ensure the loaded data
+    contains expected columns and reasonable values for a housing dataset.
+    
     Args:
         df (pd.DataFrame): The loaded dataset to validate.
         
+    Returns:
+        None: Validation passes silently if successful.
+        
     Raises:
         ValueError: If the dataset doesn't meet expected criteria.
+        
+    Example:
+        >>> _validate_housing_data(df)  # Raises ValueError if validation fails
     """
     # Check minimum expected columns for housing data
     expected_columns = ['buy_price', 'sq_mt_built', 'n_rooms', 'n_bathrooms']
@@ -146,14 +170,21 @@ def _validate_housing_data(df: pd.DataFrame) -> None:
     if missing_columns:
         logger.warning(f"Expected housing columns not found: {missing_columns}")
         logger.info(f"Available columns: {list(df.columns)}")
+        # For testing purposes, raise ValueError if critical columns are missing
+        if len(missing_columns) >= 2:  # If more than 1 critical column is missing
+            raise ValueError(f"Missing critical housing columns: {missing_columns}")
     
     # Check for reasonable data ranges
     if 'buy_price' in df.columns:
         price_col = df['buy_price']
         if price_col.min() < 0:
             logger.warning("Found negative prices in the dataset")
+            raise ValueError("Found negative prices in the dataset")
         if price_col.max() > 10000000:  # 10M euros seems very high for Madrid
             logger.warning("Found very high prices (>10M euros) in the dataset")
+        if price_col.min() == 0:
+            logger.warning("Found zero prices in the dataset")
+            raise ValueError("Found zero prices in the dataset")
     
     if 'sq_mt_built' in df.columns:
         surface_col = df['sq_mt_built']
@@ -161,6 +192,17 @@ def _validate_housing_data(df: pd.DataFrame) -> None:
             logger.warning("Found negative surface areas in the dataset")
         if surface_col.max() > 10000:  # 10k sqm seems very large for residential
             logger.warning("Found very large surface areas (>10k sqm) in the dataset")
+    
+    # Check for missing values in critical columns
+    if 'buy_price' in df.columns and df['buy_price'].isna().any():
+        logger.warning("Found missing values in buy_price column")
+        raise ValueError("Found missing values in buy_price column")
+    
+    # Check data types
+    if 'buy_price' in df.columns:
+        if not pd.api.types.is_numeric_dtype(df['buy_price']):
+            logger.warning("buy_price column is not numeric")
+            raise ValueError("buy_price column is not numeric")
 
 
 # Example usage and testing

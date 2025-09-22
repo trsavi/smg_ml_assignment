@@ -1,0 +1,101 @@
+{
+  "api": {
+    "host": "127.0.0.1",
+    "port": 8000,
+    "title": "Madrid Housing Price Prediction API",
+    "version": "1.0.0",
+    "description": "API for predicting Madrid housing market prices using machine learning"
+  },
+  "model": {
+    "path": "../models/madrid_housing_model.pkl",
+    "name": "Madrid Housing Price Prediction",
+    "algorithm": "LightGBM",
+    "version": "1.0.0"
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "sq_mt_built": {"type": "number", "description": "Square meters built"},
+      "n_rooms": {"type": "number", "description": "Number of rooms"},
+      "n_bathrooms": {"type": "number", "description": "Number of bathrooms"},
+      "is_new_development": {"type": "boolean", "description": "Is new development"},
+      "has_ac": {"type": "boolean", "description": "Has air conditioning"},
+      "has_fitted_wardrobes": {"type": "boolean", "description": "Has fitted wardrobes"},
+      "has_lift": {"type": "number", "description": "Has lift (0 or 1)"},
+      "is_exterior": {"type": "number", "description": "Is exterior (0 or 1)"},
+      "has_pool": {"type": "boolean", "description": "Has pool"},
+      "has_terrace": {"type": "boolean", "description": "Has terrace"},
+      "has_balcony": {"type": "boolean", "description": "Has balcony"},
+      "has_storage_room": {"type": "boolean", "description": "Has storage room"},
+      "is_accessible": {"type": "boolean", "description": "Is accessible"},
+      "has_green_zones": {"type": "boolean", "description": "Has green zones"},
+      "has_parking": {"type": "boolean", "description": "Has parking"},
+      "house_type_id_HouseType_1_Pisos": {"type": "boolean", "description": "House type: Pisos"},
+      "house_type_id_HouseType_2_Casa_o_chalet": {"type": "boolean", "description": "House type: Casa o chalet"},
+      "house_type_id_HouseType_4_D_plex": {"type": "boolean", "description": "House type: D-plex"},
+      "house_type_id_HouseType_5_ticos": {"type": "boolean", "description": "House type: ticos"},
+      "district_id_1": {"type": "boolean", "description": "District 1"},
+      "district_id_2": {"type": "boolean", "description": "District 2"},
+      "district_id_3": {"type": "boolean", "description": "District 3"},
+      "district_id_4": {"type": "boolean", "description": "District 4"},
+      "district_id_5": {"type": "boolean", "description": "District 5"},
+      "district_id_6": {"type": "boolean", "description": "District 6"},
+      "district_id_7": {"type": "boolean", "description": "District 7"},
+      "district_id_8": {"type": "boolean", "description": "District 8"},
+      "district_id_9": {"type": "boolean", "description": "District 9"},
+      "district_id_10": {"type": "boolean", "description": "District 10"},
+      "district_id_11": {"type": "boolean", "description": "District 11"},
+      "district_id_12": {"type": "boolean", "description": "District 12"},
+      "district_id_13": {"type": "boolean", "description": "District 13"},
+      "district_id_14": {"type": "boolean", "description": "District 14"},
+      "district_id_15": {"type": "boolean", "description": "District 15"},
+      "district_id_17": {"type": "boolean", "description": "District 17"},
+      "district_id_18": {"type": "boolean", "description": "District 18"},
+      "district_id_19": {"type": "boolean", "description": "District 19"},
+      "district_id_20": {"type": "boolean", "description": "District 20"}
+    },
+    "required": [
+      "sq_mt_built", "n_rooms", "n_bathrooms", "is_new_development",
+      "has_ac", "has_fitted_wardrobes", "has_lift", "is_exterior",
+      "has_pool", "has_terrace", "has_balcony", "has_storage_room",
+      "is_accessible", "has_green_zones", "has_parking",
+      "house_type_id_HouseType_1_Pisos", "house_type_id_HouseType_2_Casa_o_chalet",
+      "house_type_id_HouseType_4_D_plex", "house_type_id_HouseType_5_ticos",
+      "district_id_1", "district_id_2", "district_id_3", "district_id_4",
+      "district_id_5", "district_id_6", "district_id_7", "district_id_8",
+      "district_id_9", "district_id_10", "district_id_11", "district_id_12",
+      "district_id_13", "district_id_14", "district_id_15", "district_id_17",
+      "district_id_18", "district_id_19", "district_id_20"
+    ]
+  },
+  "output_schema": {
+    "single_prediction": {
+      "type": "object",
+      "properties": {
+        "prediction": {"type": "number", "description": "Predicted house price in euros"}
+      },
+      "required": ["prediction"]
+    },
+    "batch_prediction": {
+      "type": "object",
+      "properties": {
+        "predictions": {
+          "type": "array",
+          "items": {"type": "number"},
+          "description": "List of predicted house prices in euros"
+        },
+        "count": {"type": "integer", "description": "Number of predictions made"}
+      },
+      "required": ["predictions", "count"]
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(levelname)s - %(message)s"
+  },
+  "request_handling": {
+    "save_requests": true,
+    "request_dir": "json_requests",
+    "timeout": 30
+  }
+}

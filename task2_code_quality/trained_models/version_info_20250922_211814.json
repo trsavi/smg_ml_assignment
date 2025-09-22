@@ -1,0 +1,7 @@
+{
+  "timestamp": "20250922_211814",
+  "versioned_model_path": "trained_models\\madrid_housing_model_20250922_211814.pkl",
+  "best_model_path": "models/madrid_housing_model.pkl",
+  "model_type": "LGBMRegressor",
+  "created_at": "2025-09-22T21:18:14.123837"
+}

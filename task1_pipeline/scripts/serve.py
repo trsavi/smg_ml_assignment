@@ -7,15 +7,18 @@ This script can:
 - Test specific API endpoints using test case files
 """
 
+# Standard library imports
 import argparse
+import json
+import logging
+import os
 import subprocess
 import sys
 import time
-import requests
-import json
 from pathlib import Path
-import logging
-import os
+
+# Third-party imports
+import requests
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

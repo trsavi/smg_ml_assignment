@@ -5,13 +5,16 @@ This module prepares the dataset following the specified steps and
 stores preprocessing parameters for consistent training/test handling.
 """
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from typing import Dict, Any, List
+# Standard library imports
 import logging
-import yaml
+from pathlib import Path
+from typing import Any, Dict, List
+
+# Third-party imports
 import joblib
+import numpy as np
+import pandas as pd
+import yaml
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,13 +23,24 @@ logger = logging.getLogger(__name__)
 class MadridHousingPreprocessor:
     """Preprocessing pipeline for Madrid Housing Market dataset."""
 
-    def __init__(self, config_path: str = "configs/preprocessing_config.yaml"):
+    def __init__(self, config_path: str = "configs/preprocessing_config.yaml") -> None:
+        """
+        Initialize the preprocessor with configuration.
+
+        Args:
+            config_path (str): Path to the preprocessing configuration file.
+        """
         self.config_path = Path(config_path)
         self.config = self._load_config()
         self.preprocessing_params: Dict[str, Any] = {}
 
     def _load_config(self) -> Dict[str, Any]:
-        """Load preprocessing configuration from YAML file."""
+        """
+        Load preprocessing configuration from YAML file.
+
+        Returns:
+            Dict[str, Any]: Configuration dictionary with preprocessing parameters.
+        """
         try:
             with open(self.config_path, 'r') as f:
                 config = yaml.safe_load(f)
@@ -38,7 +52,16 @@ class MadridHousingPreprocessor:
                     'boolean_columns': [], 'critical_columns': []}
 
     def prepare_data(self, df: pd.DataFrame, is_training: bool = True) -> pd.DataFrame:
-        """Prepare data for ML models like LightGBM."""
+        """
+        Prepare data for ML models like LightGBM.
+
+        Args:
+            df (pd.DataFrame): Input housing dataset.
+            is_training (bool): Whether this is training data (affects parameter fitting).
+
+        Returns:
+            pd.DataFrame: Processed dataset ready for ML training.
+        """
         df_processed = df.copy()
 
         # Step 1: Drop specified columns
@@ -122,18 +145,43 @@ class MadridHousingPreprocessor:
         return df_processed
 
     def fit(self, X: pd.DataFrame) -> None:
-        """Fit preprocessing params on training data."""
+        """
+        Fit preprocessing params on training data.
+
+        Args:
+            X (pd.DataFrame): Training dataset to fit preprocessing parameters.
+        """
         _ = self.prepare_data(X, is_training=True)
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """Apply preprocessing using fitted params."""
+        """
+        Apply preprocessing using fitted params.
+
+        Args:
+            X (pd.DataFrame): Dataset to transform.
+
+        Returns:
+            pd.DataFrame: Transformed dataset.
+        """
         return self.prepare_data(X, is_training=False)
 
     def save_pipeline(self, filepath: str) -> None:
+        """
+        Save preprocessing parameters to file.
+
+        Args:
+            filepath (str): Path where to save the preprocessing parameters.
+        """
         joblib.dump(self.preprocessing_params, filepath)
         logger.info(f"Saved preprocessing params → {filepath}")
 
     def load_pipeline(self, filepath: str) -> None:
+        """
+        Load preprocessing parameters from file.
+
+        Args:
+            filepath (str): Path to the preprocessing parameters file.
+        """
         self.preprocessing_params = joblib.load(filepath)
         logger.info(f"Loaded preprocessing params ← {filepath}")
 

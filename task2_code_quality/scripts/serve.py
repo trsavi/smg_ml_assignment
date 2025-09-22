@@ -1,32 +1,87 @@
 #!/usr/bin/env python3
 """
-API serving script for Madrid Housing Market pipeline.
+Refactored API serving script for Madrid Housing Market pipeline.
 
 This script can:
-- Start the FastAPI server
+- Start the FastAPI server (refactored version)
 - Test specific API endpoints using test case files
+- Load configuration from config files
 """
 
+# Standard library imports
 import argparse
+import json
+import logging
+import os
 import subprocess
 import sys
 import time
-import requests
-import json
 from pathlib import Path
-import logging
-import os
+
+# Third-party imports
+import requests
+
+# Add src to path for imports
+sys.path.append(str(Path(__file__).parent.parent / "src"))
+
+# Local imports
+from utils.api import APIConfigLoader
+from utils.file_manager import FileManager
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
-def start_api_server(host="127.0.0.1", port=8000):
-    """Start the FastAPI server."""
+def load_api_config() -> dict:
+    """
+    Load API configuration from config file.
+    
+    Args:
+        None: Uses default config file path.
+        
+    Returns:
+        dict: API configuration dictionary.
+        
+    Example:
+        >>> config = load_api_config()
+        >>> print(config['api']['host'])
+    """
+    file_manager = FileManager()
+    config_loader = APIConfigLoader(file_manager)
+    return config_loader.load_config()
+
+
+def start_api_server(host=None, port=None, use_refactored=True):
+    """
+    Start the FastAPI server.
+    
+    Args:
+        host (str, optional): Host to bind to. If None, uses config default.
+        port (int, optional): Port to bind to. If None, uses config default.
+        use_refactored (bool): Whether to use refactored API.
+        
+    Returns:
+        None: Starts the server process.
+        
+    Raises:
+        SystemExit: If server startup fails.
+        
+    Example:
+        >>> start_api_server(host="0.0.0.0", port=8080)
+    """
+    # Load configuration to get default values
+    config = load_api_config()
+    api_config = config.get("api", {})
+    
+    # Use provided values or fall back to config defaults
+    host = host or api_config.get("host", "127.0.0.1")
+    port = port or api_config.get("port", 8000)
     print(f"Starting API server on {host}:{port}...")
     
-    cmd = ["python", "api.py"]
+    # Choose which API to run
+    api_file = "api.py"
+    cmd = ["python", api_file]
     
     try:
         # Change to src directory for api.py
@@ -39,8 +94,27 @@ def start_api_server(host="127.0.0.1", port=8000):
         sys.exit(1)
 
 
-def test_health_check(host="127.0.0.1", port=8000):
-    """Test the health check endpoint."""
+def test_health_check(host=None, port=None):
+    """
+    Test the health check endpoint.
+    
+    Args:
+        host (str, optional): API host. If None, uses config default.
+        port (int, optional): API port. If None, uses config default.
+        
+    Returns:
+        bool: True if health check passes, False otherwise.
+        
+    Example:
+        >>> success = test_health_check()
+        >>> print(f"Health check: {'PASSED' if success else 'FAILED'}")
+    """
+    # Load configuration to get default values
+    config = load_api_config()
+    api_config = config.get("api", {})
+    host = host or api_config.get("host", "127.0.0.1")
+    port = port or api_config.get("port", 8000)
+    
     print("Testing health check endpoint...")
     try:
         response = requests.get(f"http://{host}:{port}/health")
@@ -56,8 +130,27 @@ def test_health_check(host="127.0.0.1", port=8000):
         return False
 
 
-def test_model_info(host="127.0.0.1", port=8000):
-    """Test the model info endpoint."""
+def test_model_info(host=None, port=None):
+    """
+    Test the model info endpoint.
+    
+    Args:
+        host (str, optional): API host. If None, uses config default.
+        port (int, optional): API port. If None, uses config default.
+        
+    Returns:
+        bool: True if model info endpoint works, False otherwise.
+        
+    Example:
+        >>> success = test_model_info()
+        >>> print(f"Model info: {'PASSED' if success else 'FAILED'}")
+    """
+    # Load configuration to get default values
+    config = load_api_config()
+    api_config = config.get("api", {})
+    host = host or api_config.get("host", "127.0.0.1")
+    port = port or api_config.get("port", 8000)
+    
     print("\nTesting model info endpoint...")
     try:
         response = requests.get(f"http://{host}:{port}/model/info")
@@ -73,8 +166,27 @@ def test_model_info(host="127.0.0.1", port=8000):
         return False
 
 
-def test_predict(host="127.0.0.1", port=8000):
-    """Test the prediction endpoint using test_case_1.json."""
+def test_predict(host=None, port=None):
+    """
+    Test the prediction endpoint using test_case_1.json.
+    
+    Args:
+        host (str, optional): API host. If None, uses config default.
+        port (int, optional): API port. If None, uses config default.
+        
+    Returns:
+        bool: True if prediction endpoint works, False otherwise.
+        
+    Example:
+        >>> success = test_predict()
+        >>> print(f"Prediction: {'PASSED' if success else 'FAILED'}")
+    """
+    # Load configuration to get default values
+    config = load_api_config()
+    api_config = config.get("api", {})
+    host = host or api_config.get("host", "127.0.0.1")
+    port = port or api_config.get("port", 8000)
+    
     print("\nTesting prediction endpoint...")
     
     # Load test case
@@ -94,8 +206,6 @@ def test_predict(host="127.0.0.1", port=8000):
             print("Prediction endpoint passed")
             result = response.json()
             print(f"Predicted price: €{result['prediction']:,.2f}")
-            if 'confidence' in result:
-                print(f"Confidence: {result['confidence']:.2f}")
             return True
         else:
             print(f"Prediction failed: {response.status_code}")
@@ -106,8 +216,27 @@ def test_predict(host="127.0.0.1", port=8000):
         return False
 
 
-def test_batch_predict(host="127.0.0.1", port=8000):
-    """Test the batch prediction endpoint using test_case_batch_prediction.json."""
+def test_batch_predict(host=None, port=None):
+    """
+    Test the batch prediction endpoint using test_case_batch_prediction.json.
+    
+    Args:
+        host (str, optional): API host. If None, uses config default.
+        port (int, optional): API port. If None, uses config default.
+        
+    Returns:
+        bool: True if batch prediction endpoint works, False otherwise.
+        
+    Example:
+        >>> success = test_batch_predict()
+        >>> print(f"Batch prediction: {'PASSED' if success else 'FAILED'}")
+    """
+    # Load configuration to get default values
+    config = load_api_config()
+    api_config = config.get("api", {})
+    host = host or api_config.get("host", "127.0.0.1")
+    port = port or api_config.get("port", 8000)
+    
     print("\nTesting batch prediction endpoint...")
     
     # Load test case
@@ -140,13 +269,29 @@ def test_batch_predict(host="127.0.0.1", port=8000):
 
 
 def main():
-    """Main function to handle serve and test operations."""
+    """
+    Main function to handle serve and test operations.
+    
+    This function provides a command-line interface for starting the API server
+    or testing specific endpoints.
+    
+    Args:
+        None: Uses command line arguments for configuration.
+        
+    Returns:
+        None: Executes the requested operation.
+        
+    Example:
+        >>> python serve.py start --host 0.0.0.0 --port 8080
+        >>> python serve.py health_check
+    """
     parser = argparse.ArgumentParser(
-        description='Serve and test Madrid Housing Market API',
+        description='Serve and test Madrid Housing Market API (Refactored)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s start                    # Start API server
+  %(prog)s start                    # Start refactored API server
+  %(prog)s start --legacy           # Start legacy API server
   %(prog)s health_check             # Test health check endpoint
   %(prog)s model_info               # Test model info endpoint
   %(prog)s predict                  # Test prediction endpoint
@@ -156,10 +301,18 @@ Examples:
     
     parser.add_argument('action', choices=['start', 'health_check', 'model_info', 'predict', 'batch_predict'],
                        help='Action to perform: start server or test specific endpoint')
-    parser.add_argument('--host', default='127.0.0.1',
-                       help='Host to bind to (default: 127.0.0.1)')
-    parser.add_argument('--port', type=int, default=8000,
-                       help='Port to bind to (default: 8000)')
+    # Load configuration to get default values for argument parser
+    config = load_api_config()
+    api_config = config.get("api", {})
+    default_host = api_config.get("host", "127.0.0.1")
+    default_port = api_config.get("port", 8000)
+    
+    parser.add_argument('--host', default=default_host,
+                       help=f'Host to bind to (default: {default_host})')
+    parser.add_argument('--port', type=int, default=default_port,
+                       help=f'Port to bind to (default: {default_port})')
+    parser.add_argument('--legacy', action='store_true',
+                       help='Use legacy API instead of refactored version')
     
     args = parser.parse_args()
     
@@ -169,7 +322,7 @@ Examples:
     os.chdir(project_root)
     
     if args.action == 'start':
-        start_api_server(args.host, args.port)
+        start_api_server(args.host, args.port, use_refactored=not args.legacy)
     
     elif args.action == 'health_check':
         test_health_check(args.host, args.port)

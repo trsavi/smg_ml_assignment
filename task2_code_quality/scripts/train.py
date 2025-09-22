@@ -8,15 +8,17 @@ This script provides a simple interface to run training with different modes:
 - Grid search hyperparameter tuning (from config)
 """
 
-import sys
-import os
+# Standard library imports
 import argparse
-from pathlib import Path
 import logging
+import os
+import sys
+from pathlib import Path
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
+# Local imports
 from train_model import MadridHousingTrainer
 
 # Set up logging
@@ -25,7 +27,25 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    """Main function to run training with different modes."""
+    """
+    Main function to run training with different modes.
+    
+    This function provides a command-line interface for running different
+    training modes: single model, multiple experiments, or grid search.
+    
+    Args:
+        None: Uses command line arguments for configuration.
+        
+    Returns:
+        None: Executes the requested training mode.
+        
+    Raises:
+        SystemExit: If training fails.
+        
+    Example:
+        >>> python train.py single --run-name "experiment_1"
+        >>> python train.py experiments --config custom_config.yaml
+    """
     parser = argparse.ArgumentParser(
         description='Train Madrid Housing Market model',
         formatter_class=argparse.RawDescriptionHelpFormatter,

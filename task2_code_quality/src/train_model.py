@@ -1,31 +1,28 @@
 """
 Training module for Madrid Housing Market price prediction.
 
-This module provides training functionality with hyperparameter management
-and model evaluation.
+This module provides core training functionality with clean separation of concerns.
+Helper methods have been moved to utility modules.
 """
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from typing import Dict, Any, Tuple, List
-from sklearn.model_selection import GridSearchCV
+# Standard library imports
 import logging
-import mlflow
-import mlflow.lightgbm
-import lightgbm as lgb
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.model_selection import cross_val_score, train_test_split
-import joblib
-import yaml
-from datetime import datetime
 import warnings
-import subprocess
-import sys
+from pathlib import Path
+from typing import Any, Dict, Tuple
 
-from data_loader import load_data, split_data
-from preprocessing import MadridHousingPreprocessor
+# Third-party imports
+import lightgbm as lgb
+import pandas as pd
+from sklearn.model_selection import GridSearchCV
+
+# Local imports
 from utils.file_manager import FileManager
+from utils.data_utils import DataManager
+from utils.metrics_utils import MetricsCalculator
+from utils.model_versioning_utils import ModelVersioningManager
+from utils.mlflow_utils import MLflowLogger
+from utils.evaluation_utils import ModelEvaluator
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -39,279 +36,154 @@ class MadridHousingTrainer:
     """Trainer class for Madrid Housing Market price prediction."""
     
     def __init__(self, config_path: str = "configs/training_config.yaml"):
-        """Initialize trainer with configuration."""
+        """
+        Initialize trainer with configuration and utility managers.
+        
+        Args:
+            config_path (str): Path to training configuration file.
+            
+        Returns:
+            None: Initializes the trainer instance.
+            
+        Example:
+            >>> trainer = MadridHousingTrainer("configs/my_training_config.yaml")
+        """
         self.file_manager = FileManager()
+        self.data_manager = DataManager(self.file_manager)
+        self.metrics_calculator = MetricsCalculator(self.file_manager)
+        self.versioning_manager = ModelVersioningManager(self.file_manager)
+        self.mlflow_logger = MLflowLogger(self.file_manager)
+        self.evaluator = ModelEvaluator()
+        
         self.config_path = Path(config_path)
         self.config = self.file_manager.load_training_config(config_path)
         self.preprocessor = None
         self.model = None
-        self.feature_names = None
-        
-    
-    def _check_preprocessed_data(self) -> bool:
-        """Check if preprocessed data file exists."""
-        return self.file_manager.file_exists("data/preprocessed_houses_Madrid.csv")
-    
-    def _prepare_data_if_needed(self) -> None:
-        """Call prepare_data script if preprocessed data doesn't exist."""
-        if not self._check_preprocessed_data():
-            logger.info("Preprocessed data not found. Running data preparation...")
-            try:
-                # Call prepare_data script with --store flag
-                result = subprocess.run(
-                    [sys.executable, "scripts/prepare_data.py", "--store"],
-                    cwd=Path.cwd(),
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-                logger.info("Data preparation completed successfully")
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Error running data preparation: {e}")
-                logger.error(f"stdout: {e.stdout}")
-                logger.error(f"stderr: {e.stderr}")
-                raise RuntimeError("Failed to prepare data")
-        else:
-            logger.info("Using existing preprocessed data")
-    
-    def _load_preprocessed_data(self) -> pd.DataFrame:
-        """Load preprocessed data from file."""
-        df = self.file_manager.load_dataframe("data/preprocessed_houses_Madrid.csv")
-        logger.info(f"Loaded preprocessed data: {df.shape}")
-        return df
     
     def prepare_data(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]:
-        """Load and prepare data for training with train/validation/test splits."""
+        """
+        Prepare data for training.
+        
+        This method ensures preprocessed data exists, loads it, and splits it
+        into training, validation, and test sets.
+        
+        Args:
+            None: Uses internal data manager.
+            
+        Returns:
+            Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]: 
+                (X_train, X_val, X_test, y_train, y_val, y_test)
+                
+        Example:
+            >>> X_train, X_val, X_test, y_train, y_val, y_test = trainer.prepare_data()
+        """
         logger.info("=" * 60)
         logger.info("PREPARING DATA")
         logger.info("=" * 60)
         
-        # Check and prepare data if needed
-        self._prepare_data_if_needed()
+        # Ensure preprocessed data exists
+        self.data_manager.prepare_data_if_needed()
         
         # Load preprocessed data
-        df_processed = self._load_preprocessed_data()
+        data = self.data_manager.load_preprocessed_data()
         
-        # Get target column from config
-        data_config = self.config['data']
-        target_column = data_config['target_column']
-        
-        # Split into features and target
-        if target_column not in df_processed.columns:
-            raise ValueError(f"Target column '{target_column}' not found in preprocessed data")
-        
-        X = df_processed.drop(columns=[target_column])
-        y = df_processed[target_column]
-        
-        # First split: separate test set
-        X_temp, X_test, y_temp, y_test = train_test_split(
-            X, y,
-            test_size=data_config['test_size'],
-            random_state=data_config['random_state']
-        )
-        
-        # Second split: separate train and validation from remaining data
-        val_size = data_config.get('val_size', 0.2)  # 20% of remaining data for validation
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_temp, y_temp, 
-            test_size=val_size, 
-            random_state=data_config['random_state']
-        )
-        
-        # Feature names are now cleaned during preprocessing
-        
-        # Store feature names for later use
-        self.feature_names = X_train.columns.tolist()
-        
-        logger.info(f"Training data shape: {X_train.shape}")
-        logger.info(f"Validation data shape: {X_val.shape}")
-        logger.info(f"Test data shape: {X_test.shape}")
-        logger.info(f"Number of features: {X_train.shape[1]}")
-        
-        return X_train, X_val, X_test, y_train, y_val, y_test
+        # Prepare data splits
+        return self.data_manager.prepare_data_splits(data)
     
     def train_model(self, X_train: pd.DataFrame, y_train: pd.Series, 
-                   X_val: pd.DataFrame = None, y_val: pd.Series = None) -> lgb.LGBMRegressor:
-        """Train LightGBM model."""
+                   X_val: pd.DataFrame, y_val: pd.Series) -> lgb.LGBMRegressor:
+        """
+        Train the LightGBM model.
+        
+        This method creates and trains a LightGBM regressor using the provided
+        training and validation data with early stopping.
+        
+        Args:
+            X_train (pd.DataFrame): Training features.
+            y_train (pd.Series): Training targets.
+            X_val (pd.DataFrame): Validation features.
+            y_val (pd.Series): Validation targets.
+            
+        Returns:
+            lgb.LGBMRegressor: Trained LightGBM model.
+            
+        Example:
+            >>> model = trainer.train_model(X_train, y_train, X_val, y_val)
+        """
         logger.info("=" * 60)
         logger.info("TRAINING MODEL")
         logger.info("=" * 60)
         
-        # Get model parameters
-        model_params = self.config['model']
-        training_params = self.config['training']
+        # Get model parameters from config
+        model_params = self.config.get('model', {})
+        training_params = self.config.get('training', {})
         
-        # Initialize model
+        logger.info("Training LightGBM model...")
+        
+        # Create and train model
         self.model = lgb.LGBMRegressor(**model_params)
         
-        # Prepare validation data
-        eval_set = None
-        if X_val is not None and y_val is not None:
-            eval_set = [(X_val, y_val)]
-        
-        # Train model
-        logger.info("Training LightGBM model...")         
+        # Train with early stopping
         self.model.fit(
             X_train, y_train,
-            eval_set=eval_set,
-            callbacks=[
-                lgb.early_stopping(training_params['early_stopping_rounds']),
-                lgb.log_evaluation(training_params['verbose_eval'])
-            ]
+            eval_set=[(X_val, y_val)],
+            callbacks=[lgb.early_stopping(training_params.get('early_stopping_rounds', 10))],
+            eval_metric=training_params.get('eval_metric', 'rmse')
         )
         
         logger.info("Model training completed")
         return self.model
     
-    def evaluate_model(self, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]:
-        """Evaluate model performance."""
-        logger.info("=" * 60)
-        logger.info("EVALUATING MODEL")
-        logger.info("=" * 60)
-        
-        if self.model is None:
-            raise ValueError("No model to evaluate")
-        
-        # Make predictions
-        y_pred = self.model.predict(X_test)
-        
-        # Calculate metrics
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-        mae = mean_absolute_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-        
-        metrics = {
-            'rmse': rmse,
-            'mae': mae,
-            'r2': r2
-        }
-        
-        logger.info(f"Test RMSE: {rmse:.2f}")
-        logger.info(f"Test MAE: {mae:.2f}")
-        logger.info(f"Test R²: {r2:.3f}")
-        
-        return metrics
-    
-
-    def _get_data_version_info(self) -> Dict[str, str]:
-        """Get simple data versioning information."""
-        data_info = {}
-        
-        # Simple data info
-        if self.file_manager.file_exists("data/preprocessed_houses_Madrid.csv"):
-            data_info['data_version'] = 'preprocessed'
-            df = self.file_manager.load_dataframe("data/preprocessed_houses_Madrid.csv")
-            data_info['data_rows'] = str(len(df))
-        else:
-            data_info['data_version'] = 'unknown'
-            data_info['data_rows'] = 'unknown'
-        
-        return data_info
-
-    def log_to_mlflow(self, model, metrics: Dict[str, float] = None, run_name: str = None, 
-                     run_type: str = 'training') -> str:
+    def run_training_pipeline(self, run_name: str = None) -> Dict[str, Any]:
         """
-        Unified MLflow logging method for training, evaluation, or any experiment.
+        Run the complete training pipeline (training only).
+        
+        This method executes the full training pipeline including data preparation,
+        model training, metrics calculation, MLflow logging, and model saving.
         
         Args:
-            model: The trained model to log
-            metrics: Optional metrics to log (for evaluation runs)
-            run_name: Optional custom run name
-            run_type: Type of run ('training', 'evaluation', 'experiment')
+            run_name (str, optional): Name for the training run.
+            
+        Returns:
+            Dict[str, Any]: Dictionary with training results including run_id, model, and metrics.
+            
+        Raises:
+            Exception: If training pipeline fails.
+            
+        Example:
+            >>> results = trainer.run_training_pipeline("experiment_1")
+            >>> print(f"Run ID: {results['run_id']}")
         """
-        logger.info("=" * 60)
-        logger.info(f"LOGGING {run_type.upper()} TO MLFLOW")
-        logger.info("=" * 60)
-        
-        # Set MLflow tracking URI (local file backend)
-        mlflow_config = self.config['mlflow']
-        mlflow.set_tracking_uri(mlflow_config['tracking_uri'])
-        
-        # Set experiment (creates mlruns/ directory automatically)
-        mlflow.set_experiment(mlflow_config['experiment_name'])
-        
-        # Start run
-        with mlflow.start_run(run_name=run_name) as run:
-            # Log run type
-            mlflow.log_param('run_type', run_type)
-            
-            # Log hyperparameters (for training runs)
-            if run_type in ['training', 'experiment']:
-                mlflow.log_params(self.config['model'])
-                mlflow.log_params(self.config['training'])
-                mlflow.log_params(self.config['data'])
-                
-                # Log simple data versioning info
-                data_version_info = self._get_data_version_info()
-                mlflow.log_params(data_version_info)
-            
-            # Log metrics (for evaluation runs or when provided)
-            if metrics:
-                mlflow.log_metrics(metrics)
-            
-            # Log the model artifact
-            mlflow.lightgbm.log_model(
-                lgb_model=model,
-                artifact_path="model",
-                registered_model_name="madrid_housing_model"
-            )
-            
-            # Log feature importance as artifact
-            if hasattr(model, 'feature_importances_'):
-                feature_importance = pd.DataFrame({
-                    'feature': self.feature_names,
-                    'importance': model.feature_importances_
-                }).sort_values('importance', ascending=False)
-                
-                # Save feature importance to temporary file
-                feature_importance.to_csv('feature_importance.csv', index=False)
-                mlflow.log_artifact('feature_importance.csv')
-                
-                # Clean up temporary file
-                Path('feature_importance.csv').unlink()
-                
-                logger.info("Feature importance logged to MLflow")
-            
-            logger.info(f"{run_type.capitalize()} logged to MLflow. Run ID: {run.info.run_id}")
-            logger.info("To view results, run: python -m mlflow ui --backend-store-uri ./mlruns --port 5000")
-            return run.info.run_id
-    
-    def save_model(self, model_path: str = "models/madrid_housing_model.pkl") -> None:
-        """Save trained model and preprocessor."""
-        if self.model is None:
-            raise ValueError("No model to save. Train model first.")
-        
-        # Save model using FileManager
-        self.file_manager.save_model(self.model, model_path)
-        
-        # Save preprocessor (if available)
-        if self.preprocessor is not None:
-            preprocessor_path = str(Path(model_path).parent / "preprocessor.pkl")
-            self.preprocessor.save_pipeline(preprocessor_path)
-            logger.info(f"Preprocessor saved to {preprocessor_path}")
-        else:
-            logger.info("No preprocessor to save (preprocessing was done separately)")
-    
-    def run_training_pipeline(self, run_name: str = None) -> Dict[str, Any]:
-        """Run the complete training pipeline (training only)."""
         logger.info("Starting Madrid Housing Market Training Pipeline")
         logger.info("=" * 80)
         
         try:
-            # Prepare data (now includes train/val/test splits)
+            # Prepare data
             X_train, X_val, X_test, y_train, y_val, y_test = self.prepare_data()
             
-            # Train model with validation set
+            # Train model
             self.train_model(X_train, y_train, X_val, y_val)
             
-            # Evaluate model on test set to get metrics
-            test_metrics = self.evaluate_model(X_test, y_test)
+            # Calculate comprehensive metrics
+            logger.info("=" * 60)
+            logger.info("CALCULATING COMPREHENSIVE METRICS")
+            logger.info("=" * 60)
             
-            # Log training to MLflow with metrics
-            run_id = self.log_to_mlflow(self.model, metrics=test_metrics, run_name=run_name, run_type='training')
+            all_metrics = self.metrics_calculator.calculate_comprehensive_metrics(
+                self.model, X_train, y_train, X_val, y_val, X_test, y_test
+            )
             
-            # Save model
-            self.save_model()
+            # Log to MLflow
+            logger.info("=" * 60)
+            logger.info("LOGGING TRAINING TO MLFLOW")
+            logger.info("=" * 60)
+            
+            run_id = self.mlflow_logger.log_training_run(
+                self.model, all_metrics=all_metrics, run_name=run_name, run_type='training'
+            )
+            
+            # Save model with versioning
+            self.versioning_manager.save_model_with_versioning(self.model)
             
             logger.info("Training pipeline completed successfully!")
             logger.info("Note: Use evaluate_model.py script to evaluate the trained model.")
@@ -320,14 +192,10 @@ class MadridHousingTrainer:
                 'run_id': run_id,
                 'model': self.model,
                 'preprocessor': self.preprocessor,
-                'metrics': test_metrics,
+                'metrics': all_metrics,
                 'data_splits': {
-                    'X_train': X_train,
-                    'X_val': X_val,
-                    'X_test': X_test,
-                    'y_train': y_train,
-                    'y_val': y_val,
-                    'y_test': y_test
+                    'X_train': X_train, 'X_val': X_val, 'X_test': X_test,
+                    'y_train': y_train, 'y_val': y_val, 'y_test': y_test
                 }
             }
             
@@ -336,11 +204,15 @@ class MadridHousingTrainer:
             raise
     
     def run_multiple_experiments(self) -> Dict[str, Any]:
-        """Run multiple experiments with different configurations (training only)."""
+        """Run multiple experiments with different configurations (training only).
+        
+        Returns:
+            Dictionary with experiment results
+        """
         logger.info("Starting Multiple Experiments Training Pipeline")
         logger.info("=" * 80)
         
-        # Prepare data once (now includes train/val/test splits)
+        # Prepare data once
         X_train, X_val, X_test, y_train, y_val, y_test = self.prepare_data()
         
         results = {}
@@ -350,6 +222,7 @@ class MadridHousingTrainer:
             logger.warning("No experiments configured. Running single experiment.")
             return self.run_training_pipeline()
         
+        # Run each experiment
         for i, exp_config in enumerate(experiments):
             logger.info(f"Running experiment {i+1}/{len(experiments)}: {exp_config['run_name']}")
             
@@ -364,19 +237,33 @@ class MadridHousingTrainer:
                 # Train model with this configuration
                 self.train_model(X_train, y_train, X_val, y_val)
                 
-                # Evaluate model on test set to get metrics
-                test_metrics = self.evaluate_model(X_test, y_test)
+                # Calculate comprehensive metrics
+                all_metrics = self.metrics_calculator.calculate_comprehensive_metrics(
+                    self.model, X_train, y_train, X_val, y_val, X_test, y_test
+                )
                 
-                # Log training to MLflow with metrics
-                run_id = self.log_to_mlflow(self.model, metrics=test_metrics, run_name=exp_config['run_name'], run_type='training')
+                # Log to MLflow
+                run_id = self.mlflow_logger.log_training_run(
+                    self.model, all_metrics=all_metrics, run_name=exp_config['run_name'], run_type='training'
+                )
+                
+                # Save experiment model with versioning
+                exp_model_path = self.versioning_manager.save_experiment_model(
+                    self.model, exp_config['run_name'], 
+                    {'val_rmse': all_metrics['val']['val_rmse'], 
+                     'val_mae': all_metrics['val']['val_mae'], 
+                     'val_r2': all_metrics['val']['val_r2']}
+                )
                 
                 # Store results
                 results[exp_config['run_name']] = {
                     'run_id': run_id,
                     'model': self.model,
                     'preprocessor': self.preprocessor,
-                    'metrics': test_metrics,
-                    'description': exp_config.get('description', '')
+                    'metrics': all_metrics,
+                    'description': exp_config.get('description', ''),
+                    'versioned_model_path': exp_model_path,
+                    'val_rmse': all_metrics['val']['val_rmse']
                 }
                 
                 logger.info(f"Experiment {exp_config['run_name']} training completed successfully!")
@@ -390,16 +277,30 @@ class MadridHousingTrainer:
                 self.config['model'] = original_model_config
                 self.config['training'] = original_training_config
         
-        # Save the best model (last successful one)
-        if self.model is not None:
-            self.save_model()
+        # Find and save the best model
+        best_model, best_experiment_name, best_val_rmse = self.versioning_manager.find_best_model_from_experiments(results)
+        
+        if best_model is not None:
+            logger.info(f"Saving best model from experiment '{best_experiment_name}' to models/ directory")
+            self.model = best_model
+            self.versioning_manager.save_best_model_from_experiments(
+                best_model, best_experiment_name, best_val_rmse
+            )
+        else:
+            logger.warning("No successful experiments completed. No best model to save.")
         
         logger.info(f"All {len(experiments)} experiments training completed!")
+        logger.info(f"Best model from experiment '{best_experiment_name}' saved to models/madrid_housing_model.pkl")
         logger.info("Note: Use evaluate_model.py script to evaluate the trained models.")
+        
         return results
-
+    
     def run_grid_search(self) -> Dict[str, Any]:
-        """Run grid search hyperparameter tuning using scikit-learn's GridSearchCV."""
+        """Run grid search hyperparameter tuning using scikit-learn's GridSearchCV.
+        
+        Returns:
+            Dictionary with grid search results
+        """
         logger.info("Starting Grid Search Hyperparameter Tuning")
         logger.info("=" * 80)
 
@@ -419,7 +320,7 @@ class MadridHousingTrainer:
         # Prepare train data
         X_train, X_val, X_test, y_train, y_val, y_test = self.prepare_data()
 
-        # Initialize model with default parameters from config['model']
+        # Initialize model with default parameters from config
         base_model = self.train_model(X_train, y_train, X_val, y_val)
 
         # Setup GridSearchCV
@@ -429,8 +330,6 @@ class MadridHousingTrainer:
             scoring=scoring,
             cv=cv_folds,
             n_jobs=-1,
-            # verbose=2,
-            # return_train_score=True
         )
 
         logger.info("Running GridSearchCV...")
@@ -447,20 +346,90 @@ class MadridHousingTrainer:
         logger.info(f"Best parameters: {best_params}")
         logger.info(f"Best CV score: {best_score:.4f}")
 
-        # Save best model
+        # Save best model with versioning
         self.model = best_estimator
-        model_path = self.config["model_saving"]["model_path"]
-        self.file_manager.save_model(self.model, model_path)
-        logger.info(f"Best model saved to: {model_path}")
-
-        # Optionally log to MLflow
-        # self.log_to_mlflow(best_estimator, metrics={"cv_score": best_score}, run_name="grid_search_best")
+        
+        # Calculate comprehensive metrics for the best model
+        all_metrics = self.metrics_calculator.calculate_comprehensive_metrics(
+            self.model, X_train, y_train, X_val, y_val, X_test, y_test
+        )
+        
+        # Log to MLflow with comprehensive metrics
+        run_id = self.mlflow_logger.log_training_run(
+            self.model, all_metrics=all_metrics, run_name="grid_search_best", run_type='training'
+        )
+        
+        # Save with versioning
+        self.versioning_manager.save_model_with_versioning(self.model)
+        
+        logger.info(f"Best model from grid search saved with versioning")
+        logger.info(f"MLflow Run ID: {run_id}")
 
         return {
             "best_params": best_params,
             "best_score": best_score,
-            "cv_results": grid_search.cv_results_
+            "cv_results": grid_search.cv_results_,
+            "run_id": run_id,
+            "metrics": all_metrics
         }
+    
+    def save_model(self, model_path: str = None) -> str:
+        """Save the trained model.
+        
+        Args:
+            model_path: Path to save the model
+            
+        Returns:
+            Path where model was saved
+        """
+        if self.model is None:
+            raise ValueError("No model to save. Train a model first.")
+        
+        if model_path is None:
+            model_path = self.config.get('model_saving', {}).get('model_path', 'models/madrid_housing_model.pkl')
+        
+        return self.file_manager.save_model(self.model, model_path)
+    
+    def evaluate_model(self, X_test: pd.DataFrame, y_test: pd.Series) -> Dict[str, float]:
+        """Evaluate the trained model.
+        
+        Args:
+            X_test: Test features
+            y_test: Test target values
+            
+        Returns:
+            Dictionary with evaluation metrics
+        """
+        if self.model is None:
+            raise ValueError("No model to evaluate. Train a model first.")
+        
+        return self.evaluator.evaluate_model(self.model, X_test, y_test)
+    
+    def _check_preprocessed_data(self) -> bool:
+        """Check if preprocessed data exists.
+        
+        Returns:
+            True if preprocessed data exists, False otherwise
+        """
+        preprocessed_path = self.config.get('data', {}).get('preprocessed_path', 'data/preprocessed_houses_Madrid.csv')
+        return Path(preprocessed_path).exists()
+    
+    def _load_preprocessed_data(self) -> pd.DataFrame:
+        """Load preprocessed data.
+        
+        Returns:
+            Preprocessed DataFrame
+        """
+        preprocessed_path = self.config.get('data', {}).get('preprocessed_path', 'data/preprocessed_houses_Madrid.csv')
+        return pd.read_csv(preprocessed_path)
+    
+    def _get_data_version_info(self) -> Dict[str, Any]:
+        """Get data version information.
+        
+        Returns:
+            Dictionary with data version info
+        """
+        return self.file_manager.get_file_info('data/houses_Madrid.csv')
 
 
 def main():
@@ -479,13 +448,10 @@ def main():
             else:
                 print(f"  {exp_name}: FAILED - {result['error']}")
     else:
-        # Run single training pipeline
-        results = trainer.run_training_pipeline(run_name=f"madrid_housing_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
-        
+        # Run single training
+        results = trainer.run_training_pipeline()
         print(f"Training completed! Run ID: {results['run_id']}")
-        print("To evaluate the model, run: python .\\scripts\\evaluate_model.py")
-        print("To view MLflow UI: python -m mlflow ui --backend-store-uri ./mlruns --port 5000")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -8,15 +8,17 @@ This script provides a simple interface to run training with different modes:
 - Grid search hyperparameter tuning (from config)
 """
 
-import sys
-import os
+# Standard library imports
 import argparse
-from pathlib import Path
 import logging
+import os
+import sys
+from pathlib import Path
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
+# Local imports
 from train_model import MadridHousingTrainer
 
 # Set up logging

@@ -5,13 +5,16 @@ This module provides a centralized FileManager class for loading configuration f
 managing file paths, and handling file operations across the ML pipeline.
 """
 
-import yaml
+# Standard library imports
+import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
-import pandas as pd
+from typing import Any, Dict, Optional, Union
+
+# Third-party imports
 import joblib
-import json
+import pandas as pd
+import yaml
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -25,8 +28,15 @@ class FileManager:
         Initialize FileManager with optional base path.
         
         Args:
-            base_path: Base directory path for relative file operations.
-                      If None, uses current working directory.
+            base_path (Optional[Union[str, Path]]): Base directory path for relative file operations.
+                                                   If None, uses current working directory.
+                                                   
+        Returns:
+            None: Initializes the FileManager instance.
+            
+        Example:
+            >>> fm = FileManager("/path/to/project")
+            >>> fm = FileManager()  # Uses current working directory
         """
         self.base_path = Path(base_path) if base_path else Path.cwd()
         
@@ -36,11 +46,18 @@ class FileManager:
         Load configuration from YAML file with fallback to default config.
         
         Args:
-            config_path: Path to the YAML configuration file.
-            default_config: Default configuration to use if file loading fails.
+            config_path (Union[str, Path]): Path to the YAML configuration file.
+            default_config (Optional[Dict[str, Any]]): Default configuration to use if file loading fails.
             
         Returns:
-            Dict containing the loaded configuration.
+            Dict[str, Any]: Loaded configuration dictionary.
+            
+        Raises:
+            FileNotFoundError: If config file not found and no default provided.
+            yaml.YAMLError: If YAML parsing fails and no default provided.
+            
+        Example:
+            >>> config = fm.load_config("config.yaml", {"default": "value"})
         """
         config_path = Path(config_path)
         
@@ -80,10 +97,13 @@ class FileManager:
         Load training configuration with default fallback.
         
         Args:
-            config_path: Path to training configuration file.
+            config_path (str): Path to training configuration file.
             
         Returns:
-            Dict containing training configuration.
+            Dict[str, Any]: Training configuration dictionary.
+            
+        Example:
+            >>> config = fm.load_training_config("my_training_config.yaml")
         """
         default_config = {
             'data': {

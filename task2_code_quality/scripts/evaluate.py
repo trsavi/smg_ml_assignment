@@ -28,7 +28,21 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 def load_trained_model(model_path: str = "models/madrid_housing_model.pkl"):
-    """Load a trained model from file."""
+    """
+    Load a trained model from file.
+    
+    Args:
+        model_path (str): Path to the trained model file.
+        
+    Returns:
+        Any: Loaded model object.
+        
+    Raises:
+        FileNotFoundError: If the model file does not exist.
+        
+    Example:
+        >>> model = load_trained_model("models/my_model.pkl")
+    """
     if not Path(model_path).exists():
         raise FileNotFoundError(f"Model not found at {model_path}. Please train a model first using train.py")
     
@@ -38,7 +52,21 @@ def load_trained_model(model_path: str = "models/madrid_housing_model.pkl"):
     return model
 
 def evaluate_model_on_test_data(model, X_test, y_test):
-    """Evaluate model performance on test data."""
+    """
+    Evaluate model performance on test data.
+    
+    Args:
+        model: Trained model to evaluate.
+        X_test (pd.DataFrame): Test features.
+        y_test (pd.Series): Test target values.
+        
+    Returns:
+        Dict[str, float]: Dictionary containing evaluation metrics (rmse, mae, r2).
+        
+    Example:
+        >>> metrics = evaluate_model_on_test_data(model, X_test, y_test)
+        >>> print(f"RMSE: {metrics['rmse']:.2f}")
+    """
     logger.info("Evaluating model on test data...")
     
     # Make predictions
@@ -62,7 +90,24 @@ def evaluate_model_on_test_data(model, X_test, y_test):
     return metrics
 
 def main():
-    """Evaluate the trained model."""
+    """
+    Evaluate the trained Madrid Housing Market model.
+    
+    This function loads a trained model, prepares test data, evaluates performance,
+    and logs results to MLflow.
+    
+    Args:
+        None: Uses command line arguments for configuration.
+        
+    Returns:
+        None: Prints evaluation results and logs to MLflow.
+        
+    Raises:
+        SystemExit: If evaluation fails.
+        
+    Example:
+        >>> python evaluate.py --model-path models/my_model.pkl
+    """
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Evaluate Madrid Housing Market model')
     parser.add_argument('--model-path', type=str, default='models/madrid_housing_model.pkl',

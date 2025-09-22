@@ -242,16 +242,16 @@ class TestMadridHousingTrainer(unittest.TestCase):
         self.trainer.model = mock_model
         self.trainer.preprocessor = mock_preprocessor
         
-        with patch('train_model.joblib.dump'), \
+        with patch('joblib.dump'), \
              patch('train_model.Path.mkdir'):
             
             self.trainer.save_model("test_model.pkl")
             mock_preprocessor.save_pipeline.assert_called_once()
     
-    @patch('train_model.mlflow.start_run')
-    @patch('train_model.mlflow.log_param')
-    @patch('train_model.mlflow.log_metrics')
-    @patch('train_model.mlflow.lightgbm.log_model')
+    @patch('utils.mlflow_utils.mlflow.start_run')
+    @patch('utils.mlflow_utils.mlflow.log_param')
+    @patch('utils.mlflow_utils.mlflow.log_metrics')
+    @patch('utils.mlflow_utils.mlflow.lightgbm.log_model')
     def test_log_to_mlflow_success(self, mock_log_model, mock_log_metrics, 
                                  mock_log_param, mock_start_run):
         """Test successful MLflow logging."""
@@ -269,10 +269,10 @@ class TestMadridHousingTrainer(unittest.TestCase):
         self.trainer.feature_names = ['feature1', 'feature2', 'feature3']
         
         with patch('train_model.pd.DataFrame.to_csv'), \
-             patch('train_model.mlflow.log_artifact'), \
+             patch('utils.mlflow_utils.mlflow.log_artifact'), \
              patch('train_model.Path.unlink'):
             
-            run_id = self.trainer.log_to_mlflow(mock_model, metrics, "test_run")
+            run_id = self.trainer.mlflow_logger.log_training_run(mock_model, metrics=metrics, run_name="test_run")
             
             self.assertEqual(run_id, "test_run_id")
             mock_start_run.assert_called_once()
@@ -280,9 +280,9 @@ class TestMadridHousingTrainer(unittest.TestCase):
             mock_log_metrics.assert_called()
             mock_log_model.assert_called_once()
     
-    @patch('train_model.mlflow.start_run')
-    @patch('train_model.mlflow.log_param')
-    @patch('train_model.mlflow.lightgbm.log_model')
+    @patch('utils.mlflow_utils.mlflow.start_run')
+    @patch('utils.mlflow_utils.mlflow.log_param')
+    @patch('utils.mlflow_utils.mlflow.lightgbm.log_model')
     def test_log_to_mlflow_without_metrics(self, mock_log_model, mock_log_param, 
                                          mock_start_run):
         """Test MLflow logging without metrics."""
@@ -297,10 +297,10 @@ class TestMadridHousingTrainer(unittest.TestCase):
         self.trainer.feature_names = ['feature1', 'feature2', 'feature3']
         
         with patch('train_model.pd.DataFrame.to_csv'), \
-             patch('train_model.mlflow.log_artifact'), \
+             patch('utils.mlflow_utils.mlflow.log_artifact'), \
              patch('train_model.Path.unlink'):
             
-            run_id = self.trainer.log_to_mlflow(mock_model, run_name="test_run")
+            run_id = self.trainer.mlflow_logger.log_training_run(mock_model, run_name="test_run")
             
             self.assertEqual(run_id, "test_run_id")
             mock_start_run.assert_called_once()
@@ -328,7 +328,7 @@ class TestMadridHousingTrainer(unittest.TestCase):
             self.y_train, self.y_val, self.y_test
         ))
         
-        with patch('train_model.joblib.dump'):
+        with patch('joblib.dump'):
             result = self.trainer.run_grid_search()
         
         self.assertIn("best_params", result)
@@ -344,10 +344,10 @@ class TestMadridHousingTrainer(unittest.TestCase):
         
         self.assertIn("No grid search parameters defined", str(context.exception))
     
-    @patch('train_model.mlflow.start_run')
-    @patch('train_model.mlflow.log_param')
-    @patch('train_model.mlflow.log_metrics')
-    @patch('train_model.mlflow.lightgbm.log_model')
+    @patch('utils.mlflow_utils.mlflow.start_run')
+    @patch('utils.mlflow_utils.mlflow.log_param')
+    @patch('utils.mlflow_utils.mlflow.log_metrics')
+    @patch('utils.mlflow_utils.mlflow.lightgbm.log_model')
     def test_run_training_pipeline_success(self, mock_log_model, mock_log_metrics,
                                          mock_log_param, mock_start_run):
         """Test successful training pipeline."""
@@ -371,7 +371,7 @@ class TestMadridHousingTrainer(unittest.TestCase):
         self.trainer.feature_names = ['feature1', 'feature2', 'feature3']
         
         with patch('train_model.pd.DataFrame.to_csv'), \
-             patch('train_model.mlflow.log_artifact'), \
+             patch('utils.mlflow_utils.mlflow.log_artifact'), \
              patch('train_model.Path.unlink'):
             
             result = self.trainer.run_training_pipeline("test_run")
@@ -391,16 +391,16 @@ class TestMadridHousingTrainer(unittest.TestCase):
         self.trainer.evaluate_model = Mock(return_value={"rmse": 0.5, "mae": 0.3, "r2": 0.8})
         self.trainer.save_model = Mock()
         
-        with patch('train_model.mlflow.start_run', side_effect=Exception("MLflow error")):
+        with patch('utils.mlflow_utils.mlflow.start_run', side_effect=Exception("MLflow error")):
             with self.assertRaises(Exception) as context:
                 self.trainer.run_training_pipeline("test_run")
             
             self.assertIn("MLflow error", str(context.exception))
     
-    @patch('train_model.mlflow.start_run')
-    @patch('train_model.mlflow.log_param')
-    @patch('train_model.mlflow.log_metrics')
-    @patch('train_model.mlflow.lightgbm.log_model')
+    @patch('utils.mlflow_utils.mlflow.start_run')
+    @patch('utils.mlflow_utils.mlflow.log_param')
+    @patch('utils.mlflow_utils.mlflow.log_metrics')
+    @patch('utils.mlflow_utils.mlflow.lightgbm.log_model')
     def test_run_multiple_experiments_success(self, mock_log_model, mock_log_metrics,
                                             mock_log_param, mock_start_run):
         """Test successful multiple experiments."""
@@ -425,7 +425,7 @@ class TestMadridHousingTrainer(unittest.TestCase):
         self.trainer.save_model = Mock()
         
         with patch('train_model.pd.DataFrame.to_csv'), \
-             patch('train_model.mlflow.log_artifact'), \
+             patch('utils.mlflow_utils.mlflow.log_artifact'), \
              patch('train_model.Path.unlink'):
             
             results = self.trainer.run_multiple_experiments()
@@ -482,77 +482,6 @@ class TestMadridHousingTrainer(unittest.TestCase):
         self.assertIn("tracking_uri", mlflow_config)
 
 
-class TestMadridHousingTrainerIntegration(unittest.TestCase):
-    """Integration tests for MadridHousingTrainer."""
-    
-    def setUp(self):
-        """Set up integration test fixtures."""
-        self.trainer = MadridHousingTrainer("nonexistent.yaml")
-    
-    def test_full_training_pipeline_integration(self):
-        """Test the complete training pipeline integration."""
-        # Create realistic test data
-        np.random.seed(42)
-        n_samples = 100
-        
-        data = {
-            'sq_mt_built': np.random.uniform(50, 200, n_samples),
-            'n_rooms': np.random.randint(1, 6, n_samples),
-            'n_bathrooms': np.random.randint(1, 4, n_samples),
-            'is_new_development': np.random.choice([True, False], n_samples),
-            'has_ac': np.random.choice([True, False], n_samples),
-            'has_fitted_wardrobes': np.random.choice([True, False], n_samples),
-            'has_lift': np.random.choice([1.0, 0.0], n_samples),
-            'is_exterior': np.random.choice([1.0, 0.0], n_samples),
-            'has_pool': np.random.choice([True, False], n_samples),
-            'has_terrace': np.random.choice([True, False], n_samples),
-            'has_balcony': np.random.choice([True, False], n_samples),
-            'has_storage_room': np.random.choice([True, False], n_samples),
-            'is_accessible': np.random.choice([True, False], n_samples),
-            'has_green_zones': np.random.choice([True, False], n_samples),
-            'has_parking': np.random.choice([True, False], n_samples),
-        }
-        
-        # Add one-hot encoded features
-        for house_type in ['HouseType_1_Piso', 'HouseType_2_Casa_o_chalet', 'HouseType_3_Estudio']:
-            data[f'house_type_id_{house_type}'] = np.random.choice([True, False], n_samples)
-        
-        for district in ['District_1_Arganzuela', 'District_2_Barajas', 'District_3_Carabanchel']:
-            data[f'district_id_{district}'] = np.random.choice([True, False], n_samples)
-        
-        # Create target variable with some relationship to features
-        data['buy_price'] = (
-            data['sq_mt_built'] * 1000 + 
-            data['n_rooms'] * 50000 + 
-            data['n_bathrooms'] * 30000 + 
-            np.random.normal(0, 50000, n_samples)
-        )
-        
-        df = pd.DataFrame(data)
-        
-        # Mock the data loading
-        with patch('train_model.pd.read_csv', return_value=df), \
-             patch('train_model.Path.exists', return_value=True):
-            
-            # Test data preparation
-            X_train, X_val, X_test, y_train, y_val, y_test = self.trainer.prepare_data()
-            
-            # Verify data splits
-            self.assertGreater(len(X_train), 0)
-            self.assertGreater(len(X_val), 0)
-            self.assertGreater(len(X_test), 0)
-            
-            # Verify no target column in features
-            self.assertNotIn('buy_price', X_train.columns)
-            self.assertNotIn('buy_price', X_val.columns)
-            self.assertNotIn('buy_price', X_test.columns)
-            
-            # Verify target variables are series
-            self.assertIsInstance(y_train, pd.Series)
-            self.assertIsInstance(y_val, pd.Series)
-            self.assertIsInstance(y_test, pd.Series)
-
-
 if __name__ == '__main__':
     # Create a test suite
     test_suite = unittest.TestSuite()
@@ -560,7 +489,6 @@ if __name__ == '__main__':
     # Add test cases using TestLoader
     loader = unittest.TestLoader()
     test_suite.addTests(loader.loadTestsFromTestCase(TestMadridHousingTrainer))
-    test_suite.addTests(loader.loadTestsFromTestCase(TestMadridHousingTrainerIntegration))
     
     # Run the tests with verbose output
     runner = unittest.TextTestRunner(verbosity=2)

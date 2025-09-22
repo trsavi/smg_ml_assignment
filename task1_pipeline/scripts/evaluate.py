@@ -6,21 +6,25 @@ This script evaluates existing trained models and shows performance metrics.
 It loads a trained model and evaluates it on test data.
 """
 
-import sys
-import os
+# Standard library imports
 import argparse
+import logging
+import os
+import sys
 from pathlib import Path
-import pandas as pd
-import numpy as np
+
+# Third-party imports
 import joblib
 import mlflow
 import mlflow.lightgbm
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-import logging
+import numpy as np
+import pandas as pd
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent.parent / "src"))
 
+# Local imports
 from train import MadridHousingTrainer
 
 # Set up logging

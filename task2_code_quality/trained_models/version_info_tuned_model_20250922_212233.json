@@ -1,0 +1,10 @@
+{
+  "timestamp": "20250922_212233",
+  "experiment_name": "tuned_model",
+  "versioned_model_path": "trained_models\\madrid_housing_model_tuned_model_20250922_212233.pkl",
+  "model_type": "LGBMRegressor",
+  "created_at": "2025-09-22T21:22:33.499354",
+  "val_rmse": 276290.4154420086,
+  "val_mae": 134885.78975231003,
+  "val_r2": 0.8577572217321487
+}

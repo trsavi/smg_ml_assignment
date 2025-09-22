@@ -5,24 +5,27 @@ This module provides training functionality with hyperparameter management
 and model evaluation.
 """
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from typing import Dict, Any, Tuple, List
-from sklearn.model_selection import GridSearchCV
+# Standard library imports
 import logging
-import yaml
-import mlflow
-import mlflow.lightgbm
-import lightgbm as lgb
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.model_selection import cross_val_score, train_test_split
-import joblib
-from datetime import datetime
-import warnings
 import subprocess
 import sys
+import warnings
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
+# Third-party imports
+import joblib
+import lightgbm as lgb
+import mlflow
+import mlflow.lightgbm
+import numpy as np
+import pandas as pd
+import yaml
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import GridSearchCV, cross_val_score, train_test_split
+
+# Local imports
 from data_loader import load_data, split_data
 from preprocessing import MadridHousingPreprocessor
 
@@ -238,6 +241,41 @@ class MadridHousingTrainer:
         
         return metrics
     
+    def calculate_metrics(self, X: pd.DataFrame, y: pd.Series, dataset_name: str) -> Dict[str, float]:
+        """
+        Calculate metrics for a given dataset.
+        
+        Args:
+            X: Features
+            y: Target values
+            dataset_name: Name of the dataset (for logging)
+            
+        Returns:
+            Dictionary of metrics
+        """
+        if self.model is None:
+            raise ValueError("No model to evaluate")
+        
+        # Make predictions
+        y_pred = self.model.predict(X)
+        
+        # Calculate metrics
+        rmse = np.sqrt(mean_squared_error(y, y_pred))
+        mae = mean_absolute_error(y, y_pred)
+        r2 = r2_score(y, y_pred)
+        
+        metrics = {
+            f'{dataset_name}_rmse': rmse,
+            f'{dataset_name}_mae': mae,
+            f'{dataset_name}_r2': r2
+        }
+        
+        logger.info(f"{dataset_name.capitalize()} RMSE: {rmse:.2f}")
+        logger.info(f"{dataset_name.capitalize()} MAE: {mae:.2f}")
+        logger.info(f"{dataset_name.capitalize()} R²: {r2:.3f}")
+        
+        return metrics
+    
 
     def _get_data_version_info(self) -> Dict[str, str]:
         """Get simple data versioning information."""
@@ -255,15 +293,16 @@ class MadridHousingTrainer:
         return data_info
 
     def log_to_mlflow(self, model, metrics: Dict[str, float] = None, run_name: str = None, 
-                     run_type: str = 'training') -> str:
+                     run_type: str = 'training', all_metrics: Dict[str, Dict[str, float]] = None) -> str:
         """
         Unified MLflow logging method for training, evaluation, or any experiment.
         
         Args:
             model: The trained model to log
-            metrics: Optional metrics to log (for evaluation runs)
+            metrics: Optional metrics to log (for evaluation runs) - legacy parameter
             run_name: Optional custom run name
             run_type: Type of run ('training', 'evaluation', 'experiment')
+            all_metrics: Dictionary of metrics by dataset (e.g., {'train': {...}, 'val': {...}, 'test': {...}})
         """
         logger.info("=" * 60)
         logger.info(f"LOGGING {run_type.upper()} TO MLFLOW")
@@ -292,7 +331,13 @@ class MadridHousingTrainer:
                 mlflow.log_params(data_version_info)
             
             # Log metrics (for evaluation runs or when provided)
-            if metrics:
+            if all_metrics:
+                # Log comprehensive metrics from all datasets
+                for dataset_name, dataset_metrics in all_metrics.items():
+                    logger.info(f"Logging {dataset_name} metrics: {list(dataset_metrics.keys())}")
+                    mlflow.log_metrics(dataset_metrics)
+            elif metrics:
+                # Legacy: log single set of metrics
                 mlflow.log_metrics(metrics)
             
             # Log the model artifact
@@ -355,11 +400,25 @@ class MadridHousingTrainer:
             # Train model with validation set
             self.train_model(X_train, y_train, X_val, y_val)
             
-            # Evaluate model on test set to get metrics
-            test_metrics = self.evaluate_model(X_test, y_test)
+            # Calculate comprehensive metrics for all datasets
+            logger.info("=" * 60)
+            logger.info("CALCULATING COMPREHENSIVE METRICS")
+            logger.info("=" * 60)
             
-            # Log training to MLflow with metrics
-            run_id = self.log_to_mlflow(self.model, metrics=test_metrics, run_name=run_name, run_type='training')
+            # Calculate metrics for each dataset
+            train_metrics = self.calculate_metrics(X_train, y_train, 'train')
+            val_metrics = self.calculate_metrics(X_val, y_val, 'val')
+            test_metrics = self.calculate_metrics(X_test, y_test, 'test')
+            
+            # Prepare comprehensive metrics for MLflow
+            all_metrics = {
+                'train': train_metrics,
+                'val': val_metrics,
+                'test': test_metrics
+            }
+            
+            # Log training to MLflow with comprehensive metrics
+            run_id = self.log_to_mlflow(self.model, all_metrics=all_metrics, run_name=run_name, run_type='training')
             
             # Save model
             self.save_model()
@@ -371,7 +430,7 @@ class MadridHousingTrainer:
                 'run_id': run_id,
                 'model': self.model,
                 'preprocessor': self.preprocessor,
-                'metrics': test_metrics,
+                'metrics': all_metrics,  # Now includes train, val, and test metrics
                 'data_splits': {
                     'X_train': X_train,
                     'X_val': X_val,
@@ -415,18 +474,30 @@ class MadridHousingTrainer:
                 # Train model with this configuration
                 self.train_model(X_train, y_train, X_val, y_val)
                 
-                # Evaluate model on test set to get metrics
-                test_metrics = self.evaluate_model(X_test, y_test)
+                # Calculate comprehensive metrics for all datasets
+                logger.info(f"Calculating comprehensive metrics for experiment: {exp_config['run_name']}")
                 
-                # Log training to MLflow with metrics
-                run_id = self.log_to_mlflow(self.model, metrics=test_metrics, run_name=exp_config['run_name'], run_type='training')
+                # Calculate metrics for each dataset
+                train_metrics = self.calculate_metrics(X_train, y_train, 'train')
+                val_metrics = self.calculate_metrics(X_val, y_val, 'val')
+                test_metrics = self.calculate_metrics(X_test, y_test, 'test')
+                
+                # Prepare comprehensive metrics for MLflow
+                all_metrics = {
+                    'train': train_metrics,
+                    'val': val_metrics,
+                    'test': test_metrics
+                }
+                
+                # Log training to MLflow with comprehensive metrics
+                run_id = self.log_to_mlflow(self.model, all_metrics=all_metrics, run_name=exp_config['run_name'], run_type='training')
                 
                 # Store results
                 results[exp_config['run_name']] = {
                     'run_id': run_id,
                     'model': self.model,
                     'preprocessor': self.preprocessor,
-                    'metrics': test_metrics,
+                    'metrics': all_metrics,  # Now includes train, val, and test metrics
                     'description': exp_config.get('description', '')
                 }
                 

@@ -5,11 +5,14 @@ This module provides functions to load and split the Madrid Housing Market datas
 from CSV files with proper data validation.
 """
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from typing import Tuple, Optional
+# Standard library imports
 import logging
+from pathlib import Path
+from typing import Optional, Tuple
+
+# Third-party imports
+import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
 
 logging.basicConfig(level=logging.INFO)

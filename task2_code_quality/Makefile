@@ -1,6 +1,6 @@
 # Makefile for Madrid Housing Market ML Pipeline
 
-.PHONY: help install prepare-data train train-experiments train-grid evaluate serve test-health test-model-info test-predict test-batch-predict clean test test-unittest test-coverage test-html-coverage test-file-manager test-preprocessing
+.PHONY: help install prepare-data train train-experiments train-grid evaluate serve test-health test-model-info test-predict test-batch-predict clean test test-unittest test-integration test-coverage test-html-coverage test-file-manager test-preprocessing
 
 # Default target
 help: ## Show this help message
@@ -71,18 +71,32 @@ test: ## Run all tests
 	@echo "Running all tests..."
 	python -m pytest tests/ -v
 
-test-unittest: ## Run unittest tests
-	@echo "Running unittest tests..."
+test-unittest: ## Run unit tests only
+	@echo "Running unit tests..."
 	python -m pytest tests/unittest/ -v
 
-test-coverage: ## Run tests with coverage report
-	@echo "Running tests with coverage..."
+test-integration: ## Run integration tests only
+	@echo "Running integration tests..."
+	python -m pytest tests/integration/ -v
+
+test-coverage: ## Run all tests with coverage report
+	@echo "Running all tests with coverage..."
+	python -m pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
+	@echo "HTML coverage report generated in htmlcov/index.html"
+
+test-coverage-unit: ## Run unit tests with coverage report
+	@echo "Running unit tests with coverage..."
 	python -m pytest tests/unittest/ --cov=src --cov-report=term-missing --cov-report=html
+	@echo "HTML coverage report generated in htmlcov/index.html"
+
+test-coverage-integration: ## Run integration tests with coverage report
+	@echo "Running integration tests with coverage..."
+	python -m pytest tests/integration/ --cov=src --cov-report=term-missing --cov-report=html
 	@echo "HTML coverage report generated in htmlcov/index.html"
 
 test-html-coverage: ## Run tests with HTML coverage report only
 	@echo "Running tests with HTML coverage report..."
-	python -m pytest tests/unittest/ --cov=src --cov-report=html
+	python -m pytest tests/ --cov=src --cov-report=html
 	@echo "HTML coverage report generated in htmlcov/index.html"
 
 test-file-manager: ## Run FileManager tests
@@ -142,6 +156,7 @@ docker-compose-down: ## Stop docker-compose services
 
 docker-compose-logs: ## View docker-compose logs
 	docker-compose logs -f
+
 
 
 # Documentation

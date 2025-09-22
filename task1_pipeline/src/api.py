@@ -8,16 +8,19 @@ Endpoints:
 - POST /batch_predict -> make batch predictions and save request JSON
 """
 
+# Standard library imports
+import json
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
+
+# Third-party imports
+import joblib
+import pandas as pd
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any
-import pandas as pd
-import joblib
-import json
-from pathlib import Path
-from datetime import datetime
-import logging
-import uvicorn
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -74,11 +77,19 @@ class PredictionRequest(BaseModel):
 
 class BatchPredictionRequest(BaseModel):
     """Request model for batch predictions."""
-    data: list[PredictionRequest]
+    data: List[PredictionRequest]
 
 
-def load_model(model_path: str = "models/madrid_housing_model.pkl"):
-    """Load trained model from file and extract metadata."""
+def load_model(model_path: str = "models/madrid_housing_model.pkl") -> None:
+    """
+    Load trained model from file and extract metadata.
+
+    Args:
+        model_path (str): Path to the trained model file.
+
+    Returns:
+        None: Model is loaded into global variables.
+    """
     global model, model_info
     try:
         model = joblib.load(model_path)
@@ -110,7 +121,15 @@ def load_model(model_path: str = "models/madrid_housing_model.pkl"):
 
 
 def save_request_json(request_data: Dict[str, Any]) -> str:
-    """Save raw JSON request for debugging/testing."""
+    """
+    Save raw JSON request for debugging/testing.
+
+    Args:
+        request_data (Dict[str, Any]): Request data to save as JSON.
+
+    Returns:
+        str: Path to the saved JSON file.
+    """
     requests_dir = Path("json_requests")
     requests_dir.mkdir(exist_ok=True)
     filename = f"request_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -122,25 +141,57 @@ def save_request_json(request_data: Dict[str, Any]) -> str:
 
 
 @app.on_event("startup")
-async def startup_event():
-    """Load model when app starts."""
+async def startup_event() -> None:
+    """
+    Load model when app starts.
+
+    Returns:
+        None: Model is loaded into global variables.
+    """
     load_model()
 
 
 @app.get("/health")
-async def health():
+async def health() -> Dict[str, Any]:
+    """
+    Health check endpoint.
+
+    Returns:
+        Dict[str, Any]: Status information including model loaded state.
+    """
     return {"status": "ok", "model_loaded": model is not None}
 
 
 @app.get("/model/info")
-async def model_info_endpoint():
+async def model_info_endpoint() -> Dict[str, Any]:
+    """
+    Get model information endpoint.
+
+    Returns:
+        Dict[str, Any]: Model metadata and information.
+
+    Raises:
+        HTTPException: If model is not loaded.
+    """
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     return model_info
 
 
 @app.post("/predict")
-async def predict(request: PredictionRequest):
+async def predict(request: PredictionRequest) -> Dict[str, float]:
+    """
+    Make single prediction endpoint.
+
+    Args:
+        request (PredictionRequest): Single prediction request data.
+
+    Returns:
+        Dict[str, float]: Prediction result.
+
+    Raises:
+        HTTPException: If model is not loaded or prediction fails.
+    """
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
@@ -157,7 +208,19 @@ async def predict(request: PredictionRequest):
 
 
 @app.post("/batch_predict")
-async def batch_predict(request: BatchPredictionRequest):
+async def batch_predict(request: BatchPredictionRequest) -> Dict[str, Any]:
+    """
+    Make batch predictions endpoint.
+
+    Args:
+        request (BatchPredictionRequest): Batch prediction request data.
+
+    Returns:
+        Dict[str, Any]: Batch prediction results with predictions list and count.
+
+    Raises:
+        HTTPException: If model is not loaded or batch prediction fails.
+    """
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 

@@ -6,9 +6,10 @@ This script runs all tests with coverage reporting and ensures
 minimum 80% code coverage requirement is met.
 """
 
+# Standard library imports
+import os
 import subprocess
 import sys
-import os
 from pathlib import Path
 
 

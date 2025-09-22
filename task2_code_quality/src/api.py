@@ -1,192 +1,192 @@
 """
-Minimal FastAPI service for Madrid Housing Market price prediction.
+Refactored FastAPI service for Madrid Housing Market price prediction.
+
+This module contains only API route definitions and request/response handling.
+All business logic is separated into dedicated utility modules for better maintainability.
 
 Endpoints:
 - GET /health -> service status
 - GET /model/info -> model metadata
-- POST /predict -> make single prediction and save request JSON
-- POST /batch_predict -> make batch predictions and save request JSON
+- POST /predict -> make single prediction
+- POST /batch_predict -> make batch predictions
 """
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Dict, Any
-import pandas as pd
-import json
-import joblib
-from pathlib import Path
-from datetime import datetime
+# Standard library imports
 import logging
-import uvicorn
+from typing import Any, Dict
 
+# Third-party imports
+import uvicorn
+from fastapi import FastAPI, HTTPException
+
+# Local imports
+from utils.api import (
+    APIConfigLoader,
+    BatchPredictionRequest,
+    BatchPredictionResponse,
+    HealthResponse,
+    JSONHandler,
+    ModelManager,
+    PredictionRequest,
+    PredictionService,
+    SinglePredictionResponse,
+)
 from utils.file_manager import FileManager
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Madrid Housing Price Prediction API", version="1.0.0")
-
-# Global model and file manager
-model = None
-model_info = {}
+# Initialize components
 file_manager = FileManager()
+config_loader = APIConfigLoader(file_manager)
+config = config_loader.load_config()
 
+# Initialize services
+model_manager = ModelManager(file_manager)
+prediction_service = PredictionService(model_manager)
+json_handler = JSONHandler(file_manager, config)
 
-class PredictionRequest(BaseModel):
-    """Request model matches model input features exactly."""
-    sq_mt_built: float
-    n_rooms: float
-    n_bathrooms: float
-    is_new_development: bool
-    has_ac: bool
-    has_fitted_wardrobes: bool
-    has_lift: float
-    is_exterior: float
-    has_pool: bool
-    has_terrace: bool
-    has_balcony: bool
-    has_storage_room: bool
-    is_accessible: bool
-    has_green_zones: bool
-    has_parking: bool
-    house_type_id_HouseType_1_Pisos: bool
-    house_type_id_HouseType_2_Casa_o_chalet: bool
-    house_type_id_HouseType_4_D_plex: bool
-    house_type_id_HouseType_5_ticos: bool
-    district_id_1: bool
-    district_id_2: bool
-    district_id_3: bool
-    district_id_4: bool
-    district_id_5: bool
-    district_id_6: bool
-    district_id_7: bool
-    district_id_8: bool
-    district_id_9: bool
-    district_id_10: bool
-    district_id_11: bool
-    district_id_12: bool
-    district_id_13: bool
-    district_id_14: bool
-    district_id_15: bool
-    district_id_17: bool
-    district_id_18: bool
-    district_id_19: bool
-    district_id_20: bool
-
-
-class BatchPredictionRequest(BaseModel):
-    """Request model for batch predictions."""
-    data: list[PredictionRequest]
-
-
-def load_model(model_path: str = "../models/madrid_housing_model.pkl"):
-    """Load trained model from file and extract metadata."""
-    global model, model_info
-    try:
-        model = file_manager.load_model(model_path)
-        logger.info(f"Model loaded from {model_path}")
-        
-        # Extract model metadata
-        model_info = {
-            "model_name": "Madrid Housing Price Prediction",
-            "version": "1.0.0",
-            "model_type": type(model).__name__,
-            "algorithm": "LightGBM",
-            "n_features": len(model.feature_name_) if hasattr(model, 'feature_name_') else 0,
-            "n_estimators": model.n_estimators if hasattr(model, 'n_estimators') else None,
-            "learning_rate": model.learning_rate if hasattr(model, 'learning_rate') else None,
-            "max_depth": model.max_depth if hasattr(model, 'max_depth') else None,
-            "num_leaves": model.num_leaves if hasattr(model, 'num_leaves') else None,
-            "objective": model.objective if hasattr(model, 'objective') else None,
-            "random_state": model.random_state if hasattr(model, 'random_state') else None,
-            "feature_names": model.feature_name_ if hasattr(model, 'feature_name_') else [],
-            "loaded_at": datetime.now().isoformat(),
-            "model_file": model_path
-        }
-        
-        logger.info(f"Model metadata extracted: {model_info['model_type']} with {model_info['n_features']} features")
-        
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        raise
-
-
-def save_request_json(request_data: Dict[str, Any]) -> str:
-    """Save raw JSON request for debugging/testing."""
-    filename = f"request_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    filepath = f"json_requests/{filename}"
-    file_manager.save_json(request_data, filepath)
-    logger.info(f"Request saved: {filepath}")
-    return filepath
+# Create FastAPI app
+api_config = config_loader.get_api_config()
+app = FastAPI(
+    title=api_config.get("title", "Madrid Housing Price Prediction API"),
+    version=api_config.get("version", "1.0.0"),
+    description=api_config.get("description", "API for predicting Madrid housing market prices")
+)
 
 
 @app.on_event("startup")
-async def startup_event():
-    """Load model when app starts."""
-    load_model()
+async def startup_event() -> None:
+    """
+    Load model when app starts.
+
+    Returns:
+        None: Model is loaded into the model manager.
+    """
+    model_config = config_loader.get_model_config()
+    model_path = model_config.get("path", "../models/madrid_housing_model.pkl")
+    
+    try:
+        model_manager.load_model(model_path)
+        logger.info("Model loaded successfully on startup")
+    except Exception as e:
+        logger.error(f"Failed to load model on startup: {e}")
+        raise
 
 
-@app.get("/health")
-async def health():
-    return {"status": "ok", "model_loaded": model is not None}
+@app.get("/health", response_model=HealthResponse)
+async def health() -> HealthResponse:
+    """
+    Health check endpoint.
+
+    Returns:
+        HealthResponse: Status information including model loaded state.
+    """
+    return HealthResponse(
+        status="ok",
+        model_loaded=model_manager.is_model_loaded()
+    )
 
 
 @app.get("/model/info")
-async def model_info_endpoint():
-    if model is None:
+async def model_info_endpoint() -> Dict[str, Any]:
+    """
+    Get model information endpoint.
+
+    Returns:
+        Dict[str, Any]: Model metadata and information.
+
+    Raises:
+        HTTPException: If model is not loaded.
+    """
+    if not model_manager.is_model_loaded():
         raise HTTPException(status_code=503, detail="Model not loaded")
-    return model_info
+    
+    return model_manager.get_model_info()
 
 
-@app.post("/predict")
-async def predict(request: PredictionRequest):
-    if model is None:
+@app.post("/predict", response_model=SinglePredictionResponse)
+async def predict(request: PredictionRequest) -> SinglePredictionResponse:
+    """
+    Make single prediction endpoint.
+
+    Args:
+        request (PredictionRequest): Single prediction request data.
+
+    Returns:
+        SinglePredictionResponse: Prediction result.
+
+    Raises:
+        HTTPException: If model is not loaded or prediction fails.
+    """
+    if not model_manager.is_model_loaded():
         raise HTTPException(status_code=503, detail="Model not loaded")
-
-    request_data = request.dict()
-    save_request_json(request_data)
 
     try:
-        X = pd.DataFrame([request_data])
-        prediction = model.predict(X)[0]
-        return {"prediction": float(prediction)}
+        # Convert Pydantic model to dict
+        request_data = request.dict()
+        
+        # Save request for debugging
+        json_handler.save_request(request_data, "single")
+        
+        # Make prediction
+        result = prediction_service.make_single_prediction(request_data)
+        
+        return SinglePredictionResponse(prediction=result["prediction"])
+        
+    except ValueError as e:
+        logger.error(f"Validation error: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
     except Exception as e:
         logger.error(f"Prediction failed: {e}")
-        raise HTTPException(status_code=400, detail=f"Prediction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 
-@app.post("/batch_predict")
-async def batch_predict(request: BatchPredictionRequest):
-    if model is None:
+@app.post("/batch_predict", response_model=BatchPredictionResponse)
+async def batch_predict(request: BatchPredictionRequest) -> BatchPredictionResponse:
+    """
+    Make batch predictions endpoint.
+
+    Args:
+        request (BatchPredictionRequest): Batch prediction request data.
+
+    Returns:
+        BatchPredictionResponse: Batch prediction results.
+
+    Raises:
+        HTTPException: If model is not loaded or batch prediction fails.
+    """
+    if not model_manager.is_model_loaded():
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     try:
-        # Convert list of requests to list of dicts
+        # Convert Pydantic models to list of dicts
         batch_data = [item.dict() for item in request.data]
         
-        # Save batch request
-        save_request_json({"batch_data": batch_data, "count": len(batch_data)})
+        # Save batch request for debugging
+        json_handler.save_request({"batch_data": batch_data, "count": len(batch_data)}, "batch")
         
-        logger.info(f"Batch prediction request received with {len(batch_data)} records")
+        # Make batch predictions
+        result = prediction_service.make_batch_prediction(batch_data)
         
-        # Convert to DataFrame
-        X = pd.DataFrame(batch_data)
+        return BatchPredictionResponse(
+            predictions=result["predictions"],
+            count=result["count"]
+        )
         
-        # Make predictions
-        predictions = model.predict(X)
-        
-        logger.info(f"Batch prediction completed: {len(predictions)} predictions made")
-        
-        return {
-            "predictions": [float(p) for p in predictions],
-            "count": len(predictions)
-        }
-        
+    except ValueError as e:
+        logger.error(f"Validation error: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
     except Exception as e:
         logger.error(f"Batch prediction failed: {e}")
-        raise HTTPException(status_code=400, detail=f"Batch prediction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}")
 
 
 if __name__ == "__main__":
-    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
+    # Get API configuration
+    api_config = config_loader.get_api_config()
+    host = api_config.get("host", "127.0.0.1")
+    port = api_config.get("port", 8000)
+    
+    uvicorn.run("api:app", host=host, port=port, reload=True)

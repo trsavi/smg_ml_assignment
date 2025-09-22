@@ -4,12 +4,15 @@ Docker Prediction Testing Script for Madrid Housing ML Pipeline
 Tests all prediction endpoints after Docker container is running
 """
 
-import requests
+# Standard library imports
 import json
-import time
 import subprocess
 import sys
+import time
 from pathlib import Path
+
+# Third-party imports
+import requests
 
 # Configuration
 API_BASE_URL = "http://127.0.0.1:8000"

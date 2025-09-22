@@ -6,9 +6,10 @@ This script demonstrates how to run the unittest tests for the train_model.py mo
 with different configurations and output options.
 """
 
-import unittest
-import sys
+# Standard library imports
 import os
+import sys
+import unittest
 from pathlib import Path
 
 # Add src to path for imports
