@@ -87,7 +87,21 @@ smg_ml_assignment/
 
 ## Quick Start
 
-### Task 1: Production-Ready ML Pipeline
+### 1. Clone the Repository
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/smg-ml-assignment.git
+cd smg-ml-assignment
+
+# Or if using SSH
+git clone git@github.com:your-username/smg-ml-assignment.git
+cd smg-ml-assignment
+```
+
+> **Note**: Replace `your-username` with the actual GitHub username or organization name where this repository is hosted.
+
+### 2. Task 1: Production-Ready ML Pipeline
 A complete machine learning pipeline for Madrid Housing Market price prediction with MLflow tracking and FastAPI serving.
 
 ```bash
@@ -97,7 +111,7 @@ make pipeline
 make serve
 ```
 
-### Task 2: Code Quality & Engineering Excellence
+### 3. Task 2: Code Quality & Engineering Excellence
 Refactored code with proper testing, linting, and CI/CD integration.
 
 ```bash
